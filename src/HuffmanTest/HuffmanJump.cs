@@ -3,9 +3,6 @@ using System.Collections.Generic;
 
 namespace HuffmanTest
 {
-    /// <summary>
-    /// 
-    /// </summary>
     public static class HuffmanJump
     {
         private static readonly (uint code, byte bitLength)[] s_encodingTable = new (uint code, byte bitLength)[]
@@ -326,8 +323,7 @@ namespace HuffmanTest
 
         private static short[] BuildDecodingTable()
         {
-            // Entries -257 through 1 are omitted,
-            // they represent terminals (256 through 0 respectively).
+            // Entries -256 through 0 are omitted.
             // Subsequent entries are tuples.
             var table = new List<short>()
             {
@@ -339,13 +335,13 @@ namespace HuffmanTest
             for (var i = 0; i < s_encodingTable.Length; i++)
             {
                 var (code, bitLength) = s_encodingTable[i];
-                Set(table, code, bitLength, (byte)i);
+                Set(table, code, bitLength, (short)i);
             }
 
             return table.ToArray();
         }
 
-        private static void Set(List<short> table, uint code, byte bitLength, byte chr)
+        private static void Set(List<short> table, uint code, byte bitLength, short chr)
         {
             var index = 0;
             for (var bitPosition = 0; bitPosition < bitLength; bitPosition++)
@@ -401,31 +397,44 @@ namespace HuffmanTest
         public static int Decode(byte[] src, int offset, int count, byte[] dst)
         {
             var table = s_decodingTable;
-            var index = 0;
             var dstIndex = 0;
+            var tableIndex = 0;
+            var isPadding = 1;
+            var paddingBits = 0;
+
             for (var srcIndex = offset; srcIndex < count; srcIndex++)
             {
-                var byt = src[srcIndex];
+                var byt = src[offset + srcIndex];
                 for (var bitIndex = 0; bitIndex < 8; bitIndex++)
                 {
-                    var shift = 8 - bitIndex;
+                    var shift = 7 - bitIndex;
                     var bit = byt >> shift;
                     bit &= 0x1;
+                    isPadding &= bit;
+                    paddingBits++;
 
-                    index += table[index + bit];
+                    tableIndex += table[tableIndex + bit];
 
-                    if (index < -257)
-                        throw new HuffmanDecodingException();
-                    else if (index <= 0)
+                    if (tableIndex < -256)
+                        throw new HuffmanDecodingException(); // Invalid symbol.
+                    else if (tableIndex == -256)
+                        throw new HuffmanDecodingException(); // EOS.
+                    else if (tableIndex <= 0)
                     {
-                        dst[dstIndex++] = (byte)(-index);
-                        index = 0;
-                        if (dstIndex == dst.Length) break;
+                        if (dstIndex == dst.Length)
+                            throw new HuffmanDecodingException(); // dst full.
+                        dst[dstIndex++] = (byte)(-tableIndex);
+                        tableIndex = 0;
+                        isPadding = 1;
+                        paddingBits = 0;
                     }
                 }
             }
 
-            return dstIndex;
+            if (paddingBits <= 7 && isPadding == 1)
+                return dstIndex;
+
+            throw new HuffmanDecodingException(); // Too much padding.
         }
 
         /// <summary>
@@ -452,7 +461,7 @@ namespace HuffmanTest
 
                 index += table[index + bit];
 
-                if (index < -257)
+                if (index < -256)
                 {
                     decodedBits = 0;
                     return -1;
@@ -468,5 +477,4 @@ namespace HuffmanTest
             return -1;
         }
     }
-
 }

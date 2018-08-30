@@ -106,8 +106,7 @@ namespace HuffmanTest
         public HuffmanBench()
         { }
 
-        // Not passing units yet
-        //[Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
+        [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
         public ulong Jump()
         {
             var sum = 0ul;
