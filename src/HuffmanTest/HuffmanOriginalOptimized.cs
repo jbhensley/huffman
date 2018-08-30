@@ -10,7 +10,7 @@ namespace HuffmanTest
     /// <summary>
     /// 
     /// </summary>
-    public static class HuffmanOptimizedCodeAndTable
+    public static class HuffmanOriginalOptimized
     {
         // TODO: this can be constructed from _decodingTable
         private static readonly (uint code, int bitLength)[] s_encodingTable = new (uint code, int bitLength)[]
@@ -356,7 +356,7 @@ namespace HuffmanTest
             (30, 1_073741824, int.MinValue >> 29, new byte[_last] { 010, 013, 022, 0 /* 256: Special handling for last cell */ }) // 4  
         };
 
-        static HuffmanOptimizedCodeAndTable()
+        static HuffmanOriginalOptimized()
         { }
 
         /// <summary>

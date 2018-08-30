@@ -8,6 +8,7 @@ using BenchmarkDotNet.Attributes;
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Xunit;
 
@@ -86,6 +87,9 @@ namespace HuffmanTest
             VerifyHuffmanDictionary(dict);
             HuffmanDict.s_decodingDictionary = dict;
 
+            var convert = dict.Select(n => new KeyValuePair<uint, HuffmanDictOptimized.DecodingTableEntry>(n.Key, new HuffmanDictOptimized.DecodingTableEntry(n.Value.DecodedValue, n.Value.BitLength)));
+            HuffmanDictOptimized.s_decodingDictionary = new Dictionary<uint, HuffmanDictOptimized.DecodingTableEntry>(convert);
+
             // prepare data to decode
             using (var reader = File.OpenText(@".\headers.txt"))    // file must be set to copy to output dir for this to work
             {
@@ -103,7 +107,7 @@ namespace HuffmanTest
         { }
 
         [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
-        public ulong OptimizedCodeAndTable()
+        public ulong OriginalOptimized()
         {
             var sum = 0ul;
 
@@ -117,7 +121,7 @@ namespace HuffmanTest
                         var encoded = s_simpleData[i].encoded;
                         //var expected = _test[i].expected;
 
-                        var actualLength = HuffmanOptimizedCodeAndTable.Decode(encoded, 0, encoded.Length, rented);
+                        var actualLength = HuffmanOriginalOptimized.Decode(encoded, 0, encoded.Length, rented);
                         sum += (uint)actualLength;
                     }
 
@@ -126,7 +130,7 @@ namespace HuffmanTest
                     {
                         var encoded = s_headerData[i].encoded;
 
-                        var actualLength = HuffmanOptimizedCodeAndTable.Decode(encoded, 0, encoded.Length, rented);
+                        var actualLength = HuffmanOriginalOptimized.Decode(encoded, 0, encoded.Length, rented);
                         sum += (uint)actualLength;
                     }
                 }
@@ -137,7 +141,41 @@ namespace HuffmanTest
         }
 
         [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
-        public ulong DecodeWithDict()
+        public ulong DictOptimized()
+        {
+            var sum = 0ul;
+
+            var rented = ArrayPool<byte>.Shared.Rent(4096);
+            {
+                for (var j = 0; j < _iterations; j++)
+                {
+                    // Simple
+                    for (var i = 0; i < s_simpleData.Length; i++)
+                    {
+                        var encoded = s_simpleData[i].encoded;
+                        //var expected = _test[i].expected;
+
+                        var actualLength = HuffmanDictOptimized.Decode(encoded, 0, encoded.Length, rented);
+                        sum += (uint)actualLength;
+                    }
+
+                    // Headers
+                    for (var i = 0; i < s_headerData.Length; i++)
+                    {
+                        var encoded = s_headerData[i].encoded;
+
+                        var actualLength = HuffmanDictOptimized.Decode(encoded, 0, encoded.Length, rented);
+                        sum += (uint)actualLength;
+                    }
+                }
+            }
+            ArrayPool<byte>.Shared.Return(rented);
+
+            return sum;
+        }
+
+        [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
+        public ulong Dict()
         {
             var sum = 0ul;
 
@@ -171,7 +209,7 @@ namespace HuffmanTest
         }
 
         [Benchmark(Baseline = true, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
-        public ulong OriginalCode()
+        public ulong Original()
         {
             var sum = 0ul;
 

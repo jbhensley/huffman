@@ -3,17 +3,9 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Huffman.cs" />
-    <Compile Remove="HuffmanTests.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Huffman.cs" />
-    <None Include="HuffmanTests.cs" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Net.Compilers" Version="2.9.0">
