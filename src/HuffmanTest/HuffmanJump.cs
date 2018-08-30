@@ -3,25 +3,13 @@ using System.Collections.Generic;
 
 namespace HuffmanTest
 {
-    public static class HuffmanDictOptimized
+    /// <summary>
+    /// 
+    /// </summary>
+    public static class HuffmanJump
     {
-        public readonly struct DecodingTableEntry
+        private static readonly (uint code, byte bitLength)[] s_encodingTable = new (uint code, byte bitLength)[]
         {
-            public readonly uint DecodedValue;
-            public readonly int BitLength;
-
-            public DecodingTableEntry(uint decodedValue, int bitLength)
-            {
-                DecodedValue = decodedValue;
-                BitLength = bitLength;
-            }
-        }
-
-        public static Dictionary<uint, DecodingTableEntry> s_decodingDictionary;
-
-        // TODO: this can be constructed from _decodingTable
-        private static readonly (uint code, int bitLength)[] s_encodingTable = new (uint code, int bitLength)[]
-         {
             // 0
             (0b11111111_11000000_00000000_00000000, 13),
 
@@ -331,14 +319,75 @@ namespace HuffmanTest
             (0b11111111_11111111_11111101_11100000, 27),
             (0b11111111_11111111_11111110_00000000, 27),
             (0b11111111_11111111_11111011_10000000, 26),
-
-            // 256
             (0b11111111_11111111_11111111_11111100, 30)
         };
 
-        static HuffmanDictOptimized()
-        { }
+        private static readonly short[] s_decodingTable = BuildDecodingTable();
 
+        private static short[] BuildDecodingTable()
+        {
+            // Entries -257 through 1 are omitted,
+            // they represent terminals (256 through 0 respectively).
+            // Subsequent entries are tuples.
+            var table = new List<short>()
+            {
+                // Root node.
+                short.MinValue,
+                short.MinValue
+            };
+
+            for (var i = 0; i < s_encodingTable.Length; i++)
+            {
+                var (code, bitLength) = s_encodingTable[i];
+                Set(table, code, bitLength, (byte)i);
+            }
+
+            return table.ToArray();
+        }
+
+        private static void Set(List<short> table, uint code, byte bitLength, byte chr)
+        {
+            var index = 0;
+            for (var bitPosition = 0; bitPosition < bitLength; bitPosition++)
+            {
+                var shift = (8 * sizeof(uint)) - bitPosition - 1;
+                var bit = code >> shift;
+                bit &= 0x1;
+
+                var bitIndex = index + (int)bit;
+                if (bitPosition == bitLength - 1)
+                {
+                    if (table[bitIndex] != short.MinValue)
+                        throw new InvalidOperationException();
+                    table[bitIndex] = (short)(-index - chr);
+                }
+                else
+                {
+                    var nextIndex = table[bitIndex];
+                    if (nextIndex == short.MinValue)
+                    {
+                        nextIndex = (short)(table.Count - index); // Offset
+                        table[bitIndex] = nextIndex;
+                        table.Add(short.MinValue);
+                        table.Add(short.MinValue);
+                    }
+
+                    index += nextIndex;
+                    if (index < 0)
+                        throw new InvalidOperationException();
+                }
+            }
+        }
+
+        static HuffmanJump()
+        {
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns></returns>
         public static (uint encoded, int bitLength) Encode(int data) => s_encodingTable[data];
 
         /// <summary>
@@ -351,120 +400,73 @@ namespace HuffmanTest
         /// <returns>The number of decoded symbols.</returns>
         public static int Decode(byte[] src, int offset, int count, byte[] dst)
         {
-            var i = offset;
-            var j = 0;
-            var lastDecodedBits = 0;
-            var edgeIndex = count - 1;
-
-            while (i <= edgeIndex)
+            var table = s_decodingTable;
+            var index = 0;
+            var dstIndex = 0;
+            for (var srcIndex = offset; srcIndex < count; srcIndex++)
             {
-                var next = (uint)(src[i] << 24 + lastDecodedBits);
-                if (i + 1 < src.Length)
+                var byt = src[srcIndex];
+                for (var bitIndex = 0; bitIndex < 8; bitIndex++)
                 {
-                    next |= (uint)(src[i + 1] << 16 + lastDecodedBits);
+                    var shift = 8 - bitIndex;
+                    var bit = byt >> shift;
+                    bit &= 0x1;
 
-                    if (i + 2 < src.Length)
+                    index += table[index + bit];
+
+                    if (index < -257)
+                        throw new HuffmanDecodingException();
+                    else if (index <= 0)
                     {
-                        next |= (uint)(src[i + 2] << 8 + lastDecodedBits);
-
-                        if (i + 3 < src.Length)
-                        {
-                            next |= (uint)(src[i + 3] << lastDecodedBits);
-                        }
+                        dst[dstIndex++] = (byte)(-index);
+                        index = 0;
+                        if (dstIndex == dst.Length) break;
                     }
                 }
-
-                var remainingBits = 8 - lastDecodedBits;
-
-                // The remaining 7 or less bits are all 1, which is padding.
-                // We specifically check that lastDecodedBits > 0 because padding
-                // longer than 7 bits should be treated as a decoding error.
-                // http://httpwg.org/specs/rfc7541.html#rfc.section.5.2
-                if (i == edgeIndex && lastDecodedBits > 0)
-                {
-                    var ones = (uint)(int.MinValue >> remainingBits - 1);
-
-                    if ((next & ones) == ones)
-                        break;
-                }
-
-                if (j == dst.Length)
-                {
-                    // Destination is too small.
-                    throw new HuffmanDecodingException();
-                }
-
-                // The longest possible symbol size is 30 bits. If we're at the last 4 bytes
-                // of the input, we need to make sure we pass the correct number of valid bits
-                // left, otherwise the trailing 0s in next may form a valid symbol.
-                var validBits = remainingBits + (edgeIndex - i) * 8;
-                if (validBits > 30)
-                    validBits = 30; // Equivalent to Math.Min(30, validBits)
-
-                var ch = Decode(next, validBits, out var decodedBits);
-
-                if (ch == -1 || ch == 256)
-                {
-                    // -1: No valid symbol could be decoded with the bits in next.
-
-                    // 256: A Huffman-encoded string literal containing the EOS symbol MUST be treated as a decoding error.
-                    // http://httpwg.org/specs/rfc7541.html#rfc.section.5.2
-                    throw new HuffmanDecodingException();
-                }
-
-                dst[j++] = (byte)ch;
-
-                // If we crossed a byte boundary, advance i so we start at the next byte that's not fully decoded.
-                lastDecodedBits += decodedBits;
-                i += lastDecodedBits / 8;
-
-                // Modulo 8 since we only care about how many bits were decoded in the last byte that we processed.
-                lastDecodedBits %= 8;
             }
 
-            return j;
+            return dstIndex;
         }
 
+        /// <summary>
+        /// Decodes a single symbol from a 32-bit word.
+        /// </summary>
+        /// <param name="data">A 32-bit word containing a Huffman encoded symbol.</param>
+        /// <param name="validBits">
+        /// The number of bits in <paramref name="data"/> that may contain an encoded symbol.
+        /// This is not the exact number of bits that encode the symbol. Instead, it prevents
+        /// decoding the lower bits of <paramref name="data"/> if they don't contain any
+        /// encoded data.
+        /// </param>
+        /// <param name="decodedBits">The number of bits decoded from <paramref name="data"/>.</param>
+        /// <returns>The decoded symbol.</returns>
         public static int Decode(uint data, int validBits, out int decodedBits)
         {
-            int byteNumber = 3;                      // grab the most significant byte
-            uint virtualDictionaryMask = 0;          // used to key into different "virtual" dictionaries
-            DecodingTableEntry entry;
-            do
+            var table = s_decodingTable;
+            var index = 0;
+            for (var bitIndex = 0; bitIndex <= validBits; bitIndex++)
             {
-                // extract the working byte
-                uint workingByte = data >> (byteNumber * 8) & 0xFF;
+                var shift = (8 * sizeof(uint)) - bitIndex - 1;
+                var bit = data >> shift;
+                bit &= 0x1;
 
-                // apply virtual dictionary bitmask
-                if (virtualDictionaryMask > 0)
-                    workingByte |= virtualDictionaryMask;
+                index += table[index + bit];
 
-                // key into the dictionary
-                if (!s_decodingDictionary.TryGetValue(workingByte, out entry))
-                    break;  // we should either get an entry or bitmask for the next virtual dictionary. if we get neither then
-                            // the bit pattern is not consistent with any entry we have
-
-                // if we get a length back then we have found the decoded value
-                if (entry.BitLength > 0)
+                if (index < -257)
                 {
-                    if (entry.BitLength > validBits)
-                        break;  // we only found a value by incorporating bits beyond the the valid remaining length of the data stream
-
-                    decodedBits = entry.BitLength;
-                    return (int)entry.DecodedValue;
+                    decodedBits = 0;
+                    return -1;
                 }
-                // otherwise, we have found a mask that lets us key into the next virtual dictionary
-                else
+                else if (index <= 0)
                 {
-                    virtualDictionaryMask = entry.DecodedValue;
-                    byteNumber--;
+                    decodedBits = bitIndex + 1;
+                    return -index;
                 }
+            }
 
-            } while (entry.BitLength == 0);
-
-            // no luck. signal to caller that we could not decode
             decodedBits = 0;
             return -1;
         }
     }
+
 }

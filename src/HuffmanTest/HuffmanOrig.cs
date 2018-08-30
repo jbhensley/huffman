@@ -9,7 +9,7 @@ namespace HuffmanTest
     /// <summary>
     /// 
     /// </summary>
-    public static class HuffmanOriginal
+    public static class HuffmanOrig
     {
         // TODO: this can be constructed from _decodingTable
         private static readonly (uint code, int bitLength)[] s_encodingTable = new (uint code, int bitLength)[]
