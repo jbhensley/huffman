@@ -94,7 +94,7 @@ namespace HuffmanTest
                 HuffmanDictOpt.s_decodingDictionary.Add(item.Key, item.Value);
 
             // build the array
-            HuffmanArray.BuildDecodingArray();
+            //HuffmanArray.BuildDecodingArray();
             HuffmanArray.VerifyDecodingArray();
 
             // prepare data to decode

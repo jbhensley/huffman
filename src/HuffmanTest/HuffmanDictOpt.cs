@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace HuffmanTest
 {
-    public static class HuffmanDictOpt
+    internal static class HuffmanDictOpt
     {
         public readonly struct DecodingTableEntry
         {
@@ -20,7 +19,7 @@ namespace HuffmanTest
         public static readonly Dictionary<uint, DecodingTableEntry> s_decodingDictionary = new Dictionary<uint, DecodingTableEntry>(1);
 
         // TODO: this can be constructed from _decodingTable
-        private static readonly (uint code, int bitLength)[] s_encodingTable = new (uint code, int bitLength)[]
+        private static readonly (uint code, byte bitLength)[] s_encodingTable = new (uint code, byte bitLength)[]
         {
             // 0
             (0b11111111_11000000_00000000_00000000, 13),
@@ -399,7 +398,7 @@ namespace HuffmanTest
                 // The longest possible symbol size is 30 bits. If we're at the last 4 bytes
                 // of the input, we need to make sure we pass the correct number of valid bits
                 // left, otherwise the trailing 0s in next may form a valid symbol.
-                var validBits = remainingBits + (edgeIndex - i) * 8;
+                var validBits = remainingBits + ((edgeIndex - i) << 3); // * 8
                 if (validBits > 30)
                     validBits = 30; // Equivalent to Math.Min(30, validBits)
 
@@ -418,10 +417,10 @@ namespace HuffmanTest
 
                 // If we crossed a byte boundary, advance i so we start at the next byte that's not fully decoded.
                 lastDecodedBits += decodedBits;
-                i += lastDecodedBits / 8;
+                i += (lastDecodedBits >> 3); // / 8
 
                 // Modulo 8 since we only care about how many bits were decoded in the last byte that we processed.
-                lastDecodedBits %= 8;
+                lastDecodedBits &= 0x7; // % 8
             }
 
             return j;
