@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 using Xunit;
+using System.Runtime.CompilerServices;
 
 namespace HuffmanTest
 {
     internal class HuffmanArray
-    {   
-        private static readonly (uint code, int bitLength)[] s_encodingTable = new(uint code, int bitLength)[]
+    {
+        private static readonly (uint code, byte bitLength)[] s_encodingTable = new (uint code, byte bitLength)[]
         {
             (0b11111111_11000000_00000000_00000000, 13),
             (0b11111111_11111111_10110000_00000000, 23),
@@ -268,7 +270,7 @@ namespace HuffmanTest
             (0b11111111_11111111_11111111_11111100, 30)
         };
 
-        public static int[,] s_decodingArray = new int[15, 256];
+        public static short[,] s_decodingArray = new short[15, 256];
 
         public static (uint encoded, int bitLength) Encode(int data)
         {
@@ -290,10 +292,20 @@ namespace HuffmanTest
             int lastDecodedBits = 0;
             while (i < count)
             {
-                uint next = (uint)(src[i] << 24 + lastDecodedBits);
-                next |= (i + 1 < src.Length ? (uint)(src[i + 1] << 16 + lastDecodedBits) : 0);
-                next |= (i + 2 < src.Length ? (uint)(src[i + 2] << 8 + lastDecodedBits) : 0);
-                next |= (i + 3 < src.Length ? (uint)(src[i + 3] << lastDecodedBits) : 0);
+                int k = i;
+                uint next = (uint)(src[k] << 24 + lastDecodedBits);
+                if (++k < src.Length)
+                {
+                    next |= (uint)(src[k] << 16 + lastDecodedBits);
+                    if (++k < src.Length)
+                    {
+                        next |= (uint)(src[k] << 8 + lastDecodedBits);
+                        if (i + 3 < src.Length)
+                        {
+                            next |= (uint)(src[i + 3] << lastDecodedBits);
+                        }
+                    }
+                }
 
                 uint ones = (uint)(int.MinValue >> (8 - lastDecodedBits - 1));
                 if (i == count - 1 && lastDecodedBits > 0 && (next & ones) == ones)
@@ -308,7 +320,7 @@ namespace HuffmanTest
                 // The longest possible symbol size is 30 bits. If we're at the last 4 bytes
                 // of the input, we need to make sure we pass the correct number of valid bits
                 // left, otherwise the trailing 0s in next may form a valid symbol.
-                int validBits = Math.Min(30, (8 - lastDecodedBits) + (count - i - 1) * 8);
+                int validBits = Math.Min(30, (8 - lastDecodedBits) + (count - i - 1) << 3);
                 int ch = Decode(next, validBits, out int decodedBits);
 
                 if (ch == -1)
@@ -333,10 +345,10 @@ namespace HuffmanTest
 
                 // If we crossed a byte boundary, advance i so we start at the next byte that's not fully decoded.
                 lastDecodedBits += decodedBits;
-                i += lastDecodedBits / 8;
+                i += lastDecodedBits >> 3; // / 8
 
                 // Modulo 8 since we only care about how many bits were decoded in the last byte that we processed.
-                lastDecodedBits %= 8;
+                lastDecodedBits &= 0x7; // % 8
             }
 
             return j;
@@ -354,8 +366,12 @@ namespace HuffmanTest
         /// </param>
         /// <param name="decodedBits">The number of bits decoded from <paramref name="data"/>.</param>
         /// <returns>The decoded symbol.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int Decode(uint data, int validBits, out int decodedBits)
         {
+            var decoding = s_decodingArray;
+            var encoding = s_encodingTable;
+
             // decode in a max of 4
             int arrayIndex = 0;
             for (int i = 0; i < 4; i++)
@@ -364,16 +380,16 @@ namespace HuffmanTest
                 uint workingByte = data >> (8 * (3 - i)) & 0xFF;
 
                 // key into array
-                int value = s_decodingArray[arrayIndex, workingByte];
+                short value = decoding[arrayIndex, workingByte];
 
                 // if the value is positive then we have a pointer into the encoding table
                 if (value > -1)
                 {
-                    var entry = s_encodingTable[value];
-                    if (entry.bitLength > validBits)
+                    short bitLength = encoding[value].bitLength;
+                    if (bitLength > validBits)
                         break;  // we only found a value by incorporating bits beyond the the valid remaining length of the data stream
 
-                    decodedBits = s_encodingTable[value].bitLength;
+                    decodedBits = bitLength;
                     return value;   // the index is also the value
                 }
 
@@ -394,7 +410,7 @@ namespace HuffmanTest
             {
                 var tableEntry = s_encodingTable[i];    // keep from having to do "s_encodingTable[i]" everywhere
                 int currentArrayIndex = 0;              // which array are we working with
-                
+
                 // loop for however many bytes the value occupies
                 for (int j = 0; j <= Math.Ceiling(tableEntry.bitLength / 8.0); j++)
                 {
@@ -409,7 +425,7 @@ namespace HuffmanTest
                         // we need to store all permutations of the bits that are beyond the length of the code
                         int loopMax = 0x1 << (totalLength - tableEntry.bitLength); // have to create entries for all of these values
                         for (uint k = 0; k < loopMax; k++)
-                            s_decodingArray[currentArrayIndex, codeByte + k] = i;   // each entry returns the same index into the encoding table
+                            s_decodingArray[currentArrayIndex, codeByte + k] = (short)i;   // each entry returns the same index into the encoding table
 
                         break;  // we're done with this entry. bail on the loop
                     }
@@ -424,7 +440,7 @@ namespace HuffmanTest
                     else
                     {
                         subArrayIndex = nextAvailableSubIndex++;    // if no one has our bit battern then we'll stake our claim on the next available array
-                        s_decodingArray[currentArrayIndex, codeByte] = -subArrayIndex;  // blaze the trail for the next guy
+                        s_decodingArray[currentArrayIndex, codeByte] = (short)(-subArrayIndex);  // blaze the trail for the next guy
                     }
 
                     currentArrayIndex = subArrayIndex;  // we've left a pointer behind us and we're moving on to the next array

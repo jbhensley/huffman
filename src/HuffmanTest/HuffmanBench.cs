@@ -147,7 +147,7 @@ namespace HuffmanTest
             return sum;
         }
 
-        [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
+        //[Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
         public ulong OrigOpt()
         {
             var sum = 0ul;
@@ -181,7 +181,7 @@ namespace HuffmanTest
             return sum;
         }
 
-        [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
+        //[Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
         public ulong DictOpt()
         {
             var sum = 0ul;
@@ -215,7 +215,7 @@ namespace HuffmanTest
             return sum;
         }
 
-        [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
+        //[Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
         public ulong Dict()
         {
             var sum = 0ul;
