@@ -388,26 +388,26 @@ namespace HuffmanTest
             // decode in a max of 4
 
             var arrayIndex = 0;
-            var value = DecodeImpl(decodingTable, encodingTable, 0, data, ref arrayIndex, validBits, out decodedBits);
+
+            // grab data one byte at a time starting at the left
+            var value = DecodeImpl(decodingTable, encodingTable, data >> 24 & 0xFF, ref arrayIndex, validBits, out decodedBits);
             if (value != -1) return value;
 
-            value = DecodeImpl(decodingTable, encodingTable, 1, data, ref arrayIndex, validBits, out decodedBits);
+            value = DecodeImpl(decodingTable, encodingTable, data >> 16 & 0xFF, ref arrayIndex, validBits, out decodedBits);
             if (value != -1) return value;
 
-            value = DecodeImpl(decodingTable, encodingTable, 2, data, ref arrayIndex, validBits, out decodedBits);
+            value = DecodeImpl(decodingTable, encodingTable, data >> 8 & 0xFF, ref arrayIndex, validBits, out decodedBits);
             if (value != -1) return value;
 
-            value = DecodeImpl(decodingTable, encodingTable, 3, data, ref arrayIndex, validBits, out decodedBits);
+            value = DecodeImpl(decodingTable, encodingTable, data & 0xFF, ref arrayIndex, validBits, out decodedBits);
+
             return value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int DecodeImpl(short[,] decodingTable, (uint code, int bitLength)[] encodingTable, in byte i, in uint data, ref int arrayIndex, in int validBits, out int decodedBits)
+        private static int DecodeImpl(short[,] decodingTable, (uint code, int bitLength)[] encodingTable, in uint workingByte, ref int arrayIndex, in int validBits, out int decodedBits)
         {
-            decodedBits = 0;
-
-            // grab data one byte at a time starting at the left
-            uint workingByte = data >> (8 * (3 - i)) & 0xFF;
+            decodedBits = 0;            
 
             // key into array
             var value = decodingTable[arrayIndex, workingByte];
@@ -419,8 +419,8 @@ namespace HuffmanTest
                 if (bitLength > validBits)
                     return -1;  // we only found a value by incorporating bits beyond the the valid remaining length of the data stream
 
-                decodedBits = encodingTable[value].bitLength;
-                return value;   // the index is also the value
+                decodedBits = bitLength;
+                return value; // the index is also the value
             }
 
             // pointer to the next array will be stored as a negative
