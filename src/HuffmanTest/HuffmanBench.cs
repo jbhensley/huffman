@@ -91,7 +91,7 @@ namespace HuffmanTest
             HuffmanDictOpt.s_decodingDictionary = new Dictionary<uint, HuffmanDictOpt.DecodingTableEntry>(convert);
 
             // prepare data to decode
-            using (var reader = File.OpenText(@".\headers.txt"))    // file must be set to copy to output dir for this to work
+            using (var reader = File.OpenText(@".\HuffmanHeaders.txt"))    // file must be set to copy to output dir for this to work
             {
                 var i = 0;
                 string line;

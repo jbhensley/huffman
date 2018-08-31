@@ -1,5 +1,5 @@
-﻿HuffmanOrig - original code (unchanged)
+﻿HuffmanOrig - NetCore original code (unchanged except for namespace)
 HuffmanOrigOpt - grant-d code (same algorithm as original, but optimized C# and lookup table)
-HuffmanDict - jbhensly code (unchanged)
-HuffmanDictOpt - jbhensly code with further code optimizations
-HuffmanJump - jcdickinson code (using jump-table, not passing units yet)
+HuffmanDict - jbhensly code (original)
+HuffmanDictOpt - jbhensly code with grant-d optimizations
+HuffmanJump - jcdickinson code (using jump-table)

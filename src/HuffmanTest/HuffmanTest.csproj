@@ -19,7 +19,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <None Update="headers.txt">
+    <None Update="HuffmanHeaders.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
