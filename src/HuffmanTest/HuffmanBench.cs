@@ -78,7 +78,7 @@ namespace HuffmanTest
         };
 
         private const int _headerCount = 350; // From line-count in headers.txt
-        private static readonly (byte[] encoded, string decodedValue)[] s_headerData = new (byte[], string)[_headerCount];
+        public static readonly (byte[] encoded, string decodedValue)[] s_headerData = new (byte[], string)[_headerCount];
 
         [GlobalSetup]
         public void Setup()
@@ -92,6 +92,10 @@ namespace HuffmanTest
             var items = dict.Select(n => new KeyValuePair<uint, HuffmanDictOpt.DecodingTableEntry>(n.Key, new HuffmanDictOpt.DecodingTableEntry(n.Value.DecodedValue, n.Value.BitLength)));
             foreach (var item in items)
                 HuffmanDictOpt.s_decodingDictionary.Add(item.Key, item.Value);
+
+            // build the array
+            HuffmanArray.BuildDecodingArray();
+            HuffmanArray.VerifyDecodingArray();
 
             // prepare data to decode
             using (var reader = File.OpenText(@".\HuffmanHeaders.txt"))    // file must be set to copy to output dir for this to work
@@ -278,6 +282,42 @@ namespace HuffmanTest
 
             return sum;
         }
+
+        [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
+        public ulong Array()
+        {
+            var sum = 0ul;
+
+            var rented = ArrayPool<byte>.Shared.Rent(4096);
+            {
+                for (var j = 0; j < _iterations; j++)
+                {
+                    // Simple
+                    for (var i = 0; i < s_simpleData.Length; i++)
+                    {
+                        var encoded = s_simpleData[i].encoded;
+                        //var expected = _test[i].expected;
+
+                        var actualLength = HuffmanArray.Decode(encoded, 0, encoded.Length, rented);
+                        sum += (uint)actualLength;
+                    }
+
+                    // Headers
+                    for (var i = 0; i < s_headerData.Length; i++)
+                    {
+                        var encoded = s_headerData[i].encoded;
+
+                        var actualLength = HuffmanArray.Decode(encoded, 0, encoded.Length, rented);
+                        sum += (uint)actualLength;
+                    }
+                }
+            }
+            ArrayPool<byte>.Shared.Return(rented);
+
+            return sum;
+        }
+
+
 
         #region Helpers
 
