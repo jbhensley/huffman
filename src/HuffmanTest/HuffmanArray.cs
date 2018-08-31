@@ -289,7 +289,7 @@ namespace HuffmanTest
             var j = 0;
             var lastDecodedBits = 0;
             var edgeIndex = count - 1;
-            var decodingTable = s_decodingArray;
+            var decodingArray = s_decodingArray;
             var encodingTable = s_encodingTable;
 
             while (i < count)
@@ -342,7 +342,7 @@ namespace HuffmanTest
                 if (validBits > 30)
                     validBits = 30; // Equivalent to Math.Min(30, validBits)
 
-                var ch = DecodeImpl(decodingTable, encodingTable, next, validBits, out var decodedBits);
+                var ch = DecodeImpl(decodingArray, encodingTable, next, validBits, out var decodedBits);
                 if (ch == -1 || ch == 256)
                 {
                     // -1: No valid symbol could be decoded with the bits in next.
@@ -381,36 +381,37 @@ namespace HuffmanTest
             => DecodeImpl(s_decodingArray, s_encodingTable, data, validBits, out decodedBits);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int DecodeImpl(short[,] decodingTable, (uint code, int bitLength)[] encodingTable, in uint data, in int validBits, out int decodedBits)
+        private static int DecodeImpl(short[,] decodingArray, (uint code, int bitLength)[] encodingTable, in uint data, in int validBits, out int decodedBits)
         {
-            decodedBits = 0;
-
-            // decode in a max of 4
-
             var arrayIndex = 0;
+           
+            // Decode in a max of 4
+            // Grab data one byte at a time starting at the left
+            
+            // Unroll loop
+            var value = DecodeImpl(decodingArray, encodingTable, (data >> 24) & 0xFF, ref arrayIndex, validBits, out decodedBits);
+            if (value >= 0) return value;
 
-            // grab data one byte at a time starting at the left
-            var value = DecodeImpl(decodingTable, encodingTable, data >> 24 & 0xFF, ref arrayIndex, validBits, out decodedBits);
-            if (value != -1) return value;
+            value = DecodeImpl(decodingArray, encodingTable, (data >> 16) & 0xFF, ref arrayIndex, validBits, out decodedBits);
+            if (value >= 0) return value;
 
-            value = DecodeImpl(decodingTable, encodingTable, data >> 16 & 0xFF, ref arrayIndex, validBits, out decodedBits);
-            if (value != -1) return value;
+            value = DecodeImpl(decodingArray, encodingTable, (data >> 8) & 0xFF, ref arrayIndex, validBits, out decodedBits);
+            if (value >= 0) return value;
 
-            value = DecodeImpl(decodingTable, encodingTable, data >> 8 & 0xFF, ref arrayIndex, validBits, out decodedBits);
-            if (value != -1) return value;
+            value = DecodeImpl(decodingArray, encodingTable, (data >> 0) & 0xFF, ref arrayIndex, validBits, out decodedBits);
+            if (value >= 0) return value;
 
-            value = DecodeImpl(decodingTable, encodingTable, data & 0xFF, ref arrayIndex, validBits, out decodedBits);
-
-            return value;
+            // no luck. signal to caller that we could not decode
+            return -1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int DecodeImpl(short[,] decodingTable, (uint code, int bitLength)[] encodingTable, in uint workingByte, ref int arrayIndex, in int validBits, out int decodedBits)
+        private static int DecodeImpl(short[,] decodingArray, (uint code, int bitLength)[] encodingTable, in uint workingByte, ref int arrayIndex, in int validBits, out int decodedBits)
         {
             decodedBits = 0;
 
             // key into array
-            var value = decodingTable[arrayIndex, workingByte];
+            var value = decodingArray[arrayIndex, workingByte];
 
             // if the value is positive then we have a pointer into the encoding table
             if (value > -1)
@@ -426,13 +427,13 @@ namespace HuffmanTest
             // pointer to the next array will be stored as a negative
             arrayIndex = -value;
 
+            // no luck. signal to caller that we could not decode
             return -1;
         }
 
         static HuffmanArray()
         {
             short nextAvailableSubIndex = 1;
-
             // loop through each entry in the encoding table and create entries for it in our decoding array
             for (short i = 0; i < s_encodingTable.Length; i++)
             {
