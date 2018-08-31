@@ -17,7 +17,7 @@ namespace HuffmanTest
             }
         }
 
-        public static Dictionary<uint, DecodingTableEntry> s_decodingDictionary;
+        public static readonly Dictionary<uint, DecodingTableEntry> s_decodingDictionary = new Dictionary<uint, DecodingTableEntry>(1);
 
         // TODO: this can be constructed from _decodingTable
         private static readonly (uint code, int bitLength)[] s_encodingTable = new (uint code, int bitLength)[]

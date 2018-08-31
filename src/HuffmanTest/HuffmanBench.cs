@@ -87,8 +87,10 @@ namespace HuffmanTest
             VerifyHuffmanDictionary(dict);
             HuffmanDict.s_decodingDictionary = dict;
 
-            var convert = dict.Select(n => new KeyValuePair<uint, HuffmanDictOpt.DecodingTableEntry>(n.Key, new HuffmanDictOpt.DecodingTableEntry(n.Value.DecodedValue, n.Value.BitLength)));
-            HuffmanDictOpt.s_decodingDictionary = new Dictionary<uint, HuffmanDictOpt.DecodingTableEntry>(convert);
+            HuffmanDictOpt.s_decodingDictionary.EnsureCapacity(dict.Count);
+            var items = dict.Select(n => new KeyValuePair<uint, HuffmanDictOpt.DecodingTableEntry>(n.Key, new HuffmanDictOpt.DecodingTableEntry(n.Value.DecodedValue, n.Value.BitLength)));
+            foreach (var item in items)
+                HuffmanDictOpt.s_decodingDictionary.Add(item.Key, item.Value);
 
             // prepare data to decode
             using (var reader = File.OpenText(@".\HuffmanHeaders.txt"))    // file must be set to copy to output dir for this to work
