@@ -488,7 +488,7 @@ namespace HuffmanTest
         {
             for (var i = 0; i < s_encodingTable.Length; i++)
             {
-                (var code, var bitLength) = s_encodingTable[i];
+                var (code, bitLength) = s_encodingTable[i];
                 var decoded = Decode(code, bitLength, out var decodedBits);
                 Assert.NotEqual(-1, decoded);
                 Assert.Equal(bitLength, decodedBits);

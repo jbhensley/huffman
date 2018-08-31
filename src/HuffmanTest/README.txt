@@ -3,4 +3,4 @@ HuffmanOrigOpt - grant-d code (same algorithm as original, but optimized C# and 
 HuffmanDict - jbhensley code (original)
 HuffmanDictOpt - jbhensley code with grant-d optimizations
 HuffmanJump - jcdickinson code (using jump-table)
-HuffmanArray - jbhensley code
+HuffmanArray - jbhensley code with jdickinson/grant-d optimizations
