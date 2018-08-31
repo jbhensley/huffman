@@ -78,7 +78,7 @@ namespace HuffmanTest
         };
 
         private const int _headerCount = 350; // From line-count in headers.txt
-        public static readonly (byte[] encoded, string decodedValue)[] s_headerData = new (byte[], string)[_headerCount];
+        private static readonly (byte[] encoded, string decodedValue)[] s_headerData = new (byte[], string)[_headerCount];
 
         [GlobalSetup]
         public void Setup()
@@ -147,7 +147,7 @@ namespace HuffmanTest
             return sum;
         }
 
-        //[Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
+        [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
         public ulong OrigOpt()
         {
             var sum = 0ul;
@@ -316,8 +316,6 @@ namespace HuffmanTest
 
             return sum;
         }
-
-
 
         #region Helpers
 
