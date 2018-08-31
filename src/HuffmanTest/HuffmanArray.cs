@@ -416,22 +416,24 @@ namespace HuffmanTest
             // key into array
             var value = decodingArray[arrayIndex][workingByte];
 
-            // if the value is positive then we have a pointer into the encoding table
-            if (value >= 0)
+            // if the value is negative then we have a pointer
+            if (value < 0)
             {
-                var bitLength = encodingTable[value].bitLength;
-                if (bitLength > validBits)
-                    return -2; // we only found a value by incorporating bits beyond the the valid remaining length of the data stream
+                // pointers are stored as negatives
+                arrayIndex = -value;
 
-                decodedBits = bitLength;
-                return value; // the index is also the value
+                // no luck. signal to caller that we could not decode
+                return -1;
             }
+            // else: value is a successful decode
 
-            // pointer to the next array will be stored as a negative
-            arrayIndex = -value;
+            // use value to index into the encoding table
+            var bitLength = encodingTable[value].bitLength;
+            if (bitLength > validBits)
+                return -2; // we only found a value by incorporating bits beyond the the valid remaining length of the data stream
 
-            // no luck. signal to caller that we could not decode
-            return -1;
+            decodedBits = bitLength;
+            return value; // the index is also the value
         }
 
         static HuffmanArray()
