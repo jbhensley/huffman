@@ -11,6 +11,14 @@ namespace HuffmanTest
         static void Main(string[] args)
         {
             var bench = new HuffmanBench();
+
+            // Profiling
+            //bench.Setup();
+            //for (var i = 0; i < 10000; i++)
+            //{
+            //    bench.Array();
+            //}
+
             var summary = BenchmarkRunner.Run<HuffmanBench>();
 
             //var tests = new HuffmanTests();
