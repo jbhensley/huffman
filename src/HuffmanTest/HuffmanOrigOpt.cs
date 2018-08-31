@@ -358,9 +358,6 @@ namespace HuffmanTest
             (30, 1_073741824, int.MinValue >> 29, new byte[_last] { 010, 013, 022, 0 /* 256: Special handling for last cell */ }) // 4  
         };
 
-        static HuffmanOrigOpt()
-        { }
-
         /// <summary>
         /// 
         /// </summary>
