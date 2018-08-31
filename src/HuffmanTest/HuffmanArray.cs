@@ -8,7 +8,7 @@ using Xunit;
 
 namespace HuffmanTest
 {
-    internal class HuffmanArray
+    internal static class HuffmanArray
     {
         private static readonly (uint code, int bitLength)[] s_encodingTable = new (uint code, int bitLength)[]
         {
@@ -285,9 +285,9 @@ namespace HuffmanTest
         /// <returns>The number of decoded symbols.</returns>
         public static int Decode(byte[] src, int offset, int count, byte[] dst)
         {
-            int i = offset;
-            int j = 0;
-            int lastDecodedBits = 0;
+            var i = offset;
+            var j = 0;
+            var lastDecodedBits = 0;
             var edgeIndex = count - 1;
             var decodingTable = s_decodingArray;
             var encodingTable = s_encodingTable;
@@ -407,7 +407,7 @@ namespace HuffmanTest
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int DecodeImpl(short[,] decodingTable, (uint code, int bitLength)[] encodingTable, in uint workingByte, ref int arrayIndex, in int validBits, out int decodedBits)
         {
-            decodedBits = 0;            
+            decodedBits = 0;
 
             // key into array
             var value = decodingTable[arrayIndex, workingByte];
@@ -429,28 +429,29 @@ namespace HuffmanTest
             return -1;
         }
 
-        public static void BuildDecodingArray()
+        static HuffmanArray()
         {
             short nextAvailableSubIndex = 1;
+
             // loop through each entry in the encoding table and create entries for it in our decoding array
             for (short i = 0; i < s_encodingTable.Length; i++)
             {
                 var (code, bitLength) = s_encodingTable[i];    // keep from having to do "s_encodingTable[i]" everywhere
-                int currentArrayIndex = 0;              // which array are we working with
+                var currentArrayIndex = 0;              // which array are we working with
 
                 // loop for however many bytes the value occupies
-                for (int j = 0; j <= Math.Ceiling(bitLength / 8.0); j++)
+                for (var j = 0; j <= Math.Ceiling(bitLength / 8.0); j++)
                 {
-                    int byteOffset = 8 * (3 - j);       // how many bits is the working byte offset from the right
-                    int totalLength = 8 * (j + 1);      // how many bits of the entry can consume total so far
+                    var byteOffset = 8 * (3 - j);       // how many bits is the working byte offset from the right
+                    var totalLength = 8 * (j + 1);      // how many bits of the entry can consume total so far
 
-                    uint codeByte = (code >> byteOffset) & 0xFF;  // extract the working byte and shift it all the way to the right
+                    var codeByte = (code >> byteOffset) & 0xFF;  // extract the working byte and shift it all the way to the right
 
                     // we can finish the entry this time around. store the remaning bits and bail on the loop
                     if (bitLength <= totalLength)
                     {
                         // we need to store all permutations of the bits that are beyond the length of the code
-                        int loopMax = 0x1 << (totalLength - bitLength); // have to create entries for all of these values
+                        var loopMax = 0x1 << (totalLength - bitLength); // have to create entries for all of these values
                         for (uint k = 0; k < loopMax; k++)
                             s_decodingArray[currentArrayIndex, codeByte + k] = i;   // each entry returns the same index into the encoding table
 
@@ -475,12 +476,12 @@ namespace HuffmanTest
             }
         }
 
-        public static void VerifyDecodingArray()
+        internal static void VerifyDecodingArray()
         {
-            for (int i = 0; i < s_encodingTable.Length; i++)
+            for (var i = 0; i < s_encodingTable.Length; i++)
             {
-                (uint code, int bitLength) = s_encodingTable[i];
-                int decoded = Decode(code, bitLength, out int decodedBits);
+                (var code, var bitLength) = s_encodingTable[i];
+                var decoded = Decode(code, bitLength, out var decodedBits);
                 Assert.NotEqual(-1, decoded);
                 Assert.Equal(bitLength, decodedBits);
                 Assert.Equal(i, decoded);
