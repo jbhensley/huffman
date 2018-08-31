@@ -5,6 +5,8 @@
 
 #endregion
 
+using System.Runtime.CompilerServices;
+
 namespace HuffmanTest
 {
     /// <summary>
@@ -380,6 +382,7 @@ namespace HuffmanTest
             var j = 0;
             var lastDecodedBits = 0;
             var edgeIndex = count - 1;
+            var table = s_decodingTable;
 
             while (i <= edgeIndex)
             {
@@ -431,7 +434,7 @@ namespace HuffmanTest
                 if (validBits > 30)
                     validBits = 30; // Equivalent to Math.Min(30, validBits)
 
-                var ch = Decode(next, validBits, out var decodedBits);
+                var ch = DecodeImpl(table, next, validBits, out var decodedBits);
 
                 if (ch == -1 || ch == 256)
                 {
@@ -467,7 +470,11 @@ namespace HuffmanTest
         /// </param>
         /// <param name="decodedBits">The number of bits decoded from <paramref name="data"/>.</param>
         /// <returns>The decoded symbol.</returns>
-        public static int Decode(uint data, int validBits, out int decodedBits)
+        public static int Decode(in uint data, in int validBits, out int decodedBits)
+            => DecodeImpl(s_decodingTable, data, validBits, out decodedBits);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int DecodeImpl((byte, int, int, byte[])[] table, in uint data, in int validBits, out int decodedBits)
         {
             // The code below implements the decoding logic for a canonical Huffman code.
             //
@@ -489,7 +496,6 @@ namespace HuffmanTest
             var result = -1;
             decodedBits = 0;
 
-            var table = s_decodingTable;
             for (var i = 0; i < table.Length; i++)
             {
                 var (codeLength, codeMax, mask, codes) = table[i];

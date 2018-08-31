@@ -144,6 +144,40 @@ namespace HuffmanTest
         }
 
         [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
+        public ulong OrigOpt()
+        {
+            var sum = 0ul;
+
+            var rented = ArrayPool<byte>.Shared.Rent(4096);
+            {
+                for (var j = 0; j < _iterations; j++)
+                {
+                    // Simple
+                    for (var i = 0; i < s_simpleData.Length; i++)
+                    {
+                        var encoded = s_simpleData[i].encoded;
+                        //var expected = _test[i].expected;
+
+                        var actualLength = HuffmanOrigOpt.Decode(encoded, 0, encoded.Length, rented);
+                        sum += (uint)actualLength;
+                    }
+
+                    // Headers
+                    for (var i = 0; i < s_headerData.Length; i++)
+                    {
+                        var encoded = s_headerData[i].encoded;
+
+                        var actualLength = HuffmanOrigOpt.Decode(encoded, 0, encoded.Length, rented);
+                        sum += (uint)actualLength;
+                    }
+                }
+            }
+            ArrayPool<byte>.Shared.Return(rented);
+
+            return sum;
+        }
+
+        [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
         public ulong DictOpt()
         {
             var sum = 0ul;
@@ -202,40 +236,6 @@ namespace HuffmanTest
                         var encoded = s_headerData[i].encoded;
 
                         var actualLength = HuffmanDict.Decode(encoded, 0, encoded.Length, rented);
-                        sum += (uint)actualLength;
-                    }
-                }
-            }
-            ArrayPool<byte>.Shared.Return(rented);
-
-            return sum;
-        }
-
-        [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
-        public ulong OrigOpt()
-        {
-            var sum = 0ul;
-
-            var rented = ArrayPool<byte>.Shared.Rent(4096);
-            {
-                for (var j = 0; j < _iterations; j++)
-                {
-                    // Simple
-                    for (var i = 0; i < s_simpleData.Length; i++)
-                    {
-                        var encoded = s_simpleData[i].encoded;
-                        //var expected = _test[i].expected;
-
-                        var actualLength = HuffmanOrigOpt.Decode(encoded, 0, encoded.Length, rented);
-                        sum += (uint)actualLength;
-                    }
-
-                    // Headers
-                    for (var i = 0; i < s_headerData.Length; i++)
-                    {
-                        var encoded = s_headerData[i].encoded;
-
-                        var actualLength = HuffmanOrigOpt.Decode(encoded, 0, encoded.Length, rented);
                         sum += (uint)actualLength;
                     }
                 }
