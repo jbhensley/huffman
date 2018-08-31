@@ -387,8 +387,8 @@ namespace HuffmanTest
 
             // Decode in a max of 4
             // Grab data one byte at a time starting at the left
-
             // Unroll loop
+
             var value = DecodeImpl(decodingArray, encodingTable, (data >> 24) & 0xFF, ref arrayIndex, validBits, out decodedBits);
             if (value >= 0) return value;
             if (value == -2) return -1;
@@ -421,10 +421,10 @@ namespace HuffmanTest
             {
                 var bitLength = encodingTable[value].bitLength;
                 if (bitLength > validBits)
-                    return -2;  // we only found a value by incorporating bits beyond the the valid remaining length of the data stream
+                    return -2; // we only found a value by incorporating bits beyond the the valid remaining length of the data stream
 
                 decodedBits = bitLength;
-                return value;   // the index is also the value
+                return value; // the index is also the value
             }
 
             // pointer to the next array will be stored as a negative
@@ -441,8 +441,8 @@ namespace HuffmanTest
             // loop through each entry in the encoding table and create entries for it in our decoding array
             for (short i = 0; i < s_encodingTable.Length; i++)
             {
-                var (code, bitLength) = s_encodingTable[i];    // keep from having to do "s_encodingTable[i]" everywhere
-                var currentArrayIndex = 0;              // which array are we working with
+                var (code, bitLength) = s_encodingTable[i]; // keep from having to do "s_encodingTable[i]" everywhere
+                var currentArrayIndex = 0; // which array are we working with
 
                 // loop for however many bytes the value occupies
                 for (var j = 0; j <= Math.Ceiling(bitLength / 8.0); j++)
@@ -450,20 +450,20 @@ namespace HuffmanTest
                     if (s_decodingArray[currentArrayIndex] == null)
                         s_decodingArray[currentArrayIndex] = new short[256];
 
-                    var byteOffset = 8 * (3 - j);       // how many bits is the working byte offset from the right
-                    var totalLength = 8 * (j + 1);      // how many bits of the entry can consume total so far
+                    var bitOffset = 8 * (3 - j); // how many bits is the working byte offset from the right
+                    var totalBits = 8 * (j + 1); // how many bits of the entry can consume total so far
 
-                    var codeByte = (code >> byteOffset) & 0xFF;  // extract the working byte and shift it all the way to the right
+                    var codeByte = (code >> bitOffset) & 0xFF; // extract the working byte and shift it all the way to the right
 
-                    // we can finish the entry this time around. store the remaning bits and bail on the loop
-                    if (bitLength <= totalLength)
+                    // we can finish the entry this time around. store the remaining bits and bail on the loop
+                    if (bitLength <= totalBits)
                     {
                         // we need to store all permutations of the bits that are beyond the length of the code
-                        var loopMax = 0x1 << (totalLength - bitLength); // have to create entries for all of these values
+                        var loopMax = 0x1 << (totalBits - bitLength); // have to create entries for all of these values
                         for (uint k = 0; k < loopMax; k++)
-                            s_decodingArray[currentArrayIndex][codeByte + k] = i;   // each entry returns the same index into the encoding table
+                            s_decodingArray[currentArrayIndex][codeByte + k] = i; // each entry returns the same index into the encoding table
 
-                        break;  // we're done with this entry. bail on the loop
+                        break; // we're done with this entry. bail on the loop
                     }
                     // else: we need to split the entry into one or more sub-arrays
 
@@ -472,10 +472,12 @@ namespace HuffmanTest
 
                     // negative values are used as pointers to the next array. zeros are unused. positive values are a successful decode
                     if (subArrayIndex < 0)
+                    {
                         subArrayIndex = (short)-subArrayIndex;
+                    }
                     else
                     {
-                        subArrayIndex = nextAvailableSubIndex++;    // if no one has our bit battern then we'll stake our claim on the next available array
+                        subArrayIndex = nextAvailableSubIndex++; // if no one has our bit battern then we'll stake our claim on the next available array
                         s_decodingArray[currentArrayIndex][codeByte] = (short)-subArrayIndex;  // blaze the trail for the next guy
                     }
 
