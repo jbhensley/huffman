@@ -1,10 +1,25 @@
-﻿using System;
+﻿#region License
+
+// Copyright (c) K2 Workflow (SourceCode Technology Holdings Inc.). All rights reserved.
+// Licensed under the MIT License. See LICENSE file in the project root for full license information.
+
+#endregion
+
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace HuffmanTest
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public static class HuffmanJump
     {
+        private const ushort Character = 0x8000;
+        private const ushort Invalid = ushort.MaxValue & ~Character;
+
         private static readonly (uint code, byte bitLength)[] s_encodingTable = new (uint code, byte bitLength)[]
         {
             // 0
@@ -319,29 +334,36 @@ namespace HuffmanTest
             (0b11111111_11111111_11111111_11111100, 30)
         };
 
-        private static readonly short[] s_decodingTable = BuildDecodingTable();
+        private static readonly ushort[] s_decodingTable = BuildDecodingTable();
 
-        private static short[] BuildDecodingTable()
+        private static ushort[] BuildDecodingTable()
         {
             // Entries -256 through 0 are omitted.
             // Subsequent entries are tuples.
-            var table = new List<short>()
+            var table = new List<ushort>()
             {
                 // Root node.
-                short.MinValue,
-                short.MinValue
+                Invalid,
+                Invalid
             };
 
-            for (var i = 0; i < s_encodingTable.Length; i++)
+            var items = Enumerable.Range(0, s_encodingTable.Length)
+                .Select(i =>
+                {
+                    var (code, bitLength) = s_encodingTable[i];
+                    return (code, bitLength, i);
+                })
+                .OrderBy(x => x.code);
+
+            foreach (var (code, bitLength, i) in items)
             {
-                var (code, bitLength) = s_encodingTable[i];
-                Set(table, code, bitLength, (short)i);
+                Set(table, code, bitLength, (ushort)(i | Character));
             }
 
             return table.ToArray();
         }
 
-        private static void Set(List<short> table, uint code, byte bitLength, short chr)
+        private static void Set(List<ushort> table, uint code, byte bitLength, ushort chr)
         {
             var index = 0;
             for (var bitPosition = 0; bitPosition < bitLength; bitPosition++)
@@ -353,30 +375,26 @@ namespace HuffmanTest
                 var bitIndex = index + (int)bit;
                 if (bitPosition == bitLength - 1)
                 {
-                    if (table[bitIndex] != short.MinValue)
+                    if (table[bitIndex] != Invalid)
                         throw new InvalidOperationException();
-                    table[bitIndex] = (short)(-index - chr);
+                    table[bitIndex] = chr;
                 }
                 else
                 {
                     var nextIndex = table[bitIndex];
-                    if (nextIndex == short.MinValue)
+                    if (nextIndex == Invalid)
                     {
-                        nextIndex = (short)(table.Count - index); // Offset
+                        nextIndex = (ushort)(table.Count); // Offset
                         table[bitIndex] = nextIndex;
-                        table.Add(short.MinValue);
-                        table.Add(short.MinValue);
+                        table.Add(Invalid);
+                        table.Add(Invalid);
                     }
 
-                    index += nextIndex;
+                    index = nextIndex;
                     if (index < 0)
                         throw new InvalidOperationException();
                 }
             }
-        }
-
-        static HuffmanJump()
-        {
         }
 
         /// <summary>
@@ -398,43 +416,65 @@ namespace HuffmanTest
         {
             var table = s_decodingTable;
             var dstIndex = 0;
-            var tableIndex = 0;
-            var isPadding = 1;
-            var paddingBits = 0;
+            ushort tableIndex = 0;
+            byte consumedBits = 0;
+            byte byt = 0;
 
             for (var srcIndex = offset; srcIndex < count; srcIndex++)
             {
-                var byt = src[offset + srcIndex];
-                for (var bitIndex = 0; bitIndex < 8; bitIndex++)
+                byt = src[offset + srcIndex];
+                consumedBits = 0;
+                if (!DecodeBit(table, byt, 7, ref consumedBits, ref tableIndex, dst, ref dstIndex) ||
+                    !DecodeBit(table, byt, 6, ref consumedBits, ref tableIndex, dst, ref dstIndex) ||
+                    !DecodeBit(table, byt, 5, ref consumedBits, ref tableIndex, dst, ref dstIndex) ||
+                    !DecodeBit(table, byt, 4, ref consumedBits, ref tableIndex, dst, ref dstIndex) ||
+                    !DecodeBit(table, byt, 3, ref consumedBits, ref tableIndex, dst, ref dstIndex) ||
+                    !DecodeBit(table, byt, 2, ref consumedBits, ref tableIndex, dst, ref dstIndex) ||
+                    !DecodeBit(table, byt, 1, ref consumedBits, ref tableIndex, dst, ref dstIndex) ||
+                    !DecodeBit(table, byt, 0, ref consumedBits, ref tableIndex, dst, ref dstIndex))
                 {
-                    var shift = 7 - bitIndex;
-                    var bit = byt >> shift;
-                    bit &= 0x1;
-                    isPadding &= bit;
-                    paddingBits++;
-
-                    tableIndex += table[tableIndex + bit];
-
-                    if (tableIndex < -256)
-                        throw new HuffmanDecodingException(); // Invalid symbol.
-                    else if (tableIndex == -256)
-                        throw new HuffmanDecodingException(); // EOS.
-                    else if (tableIndex <= 0)
-                    {
-                        if (dstIndex == dst.Length)
-                            throw new HuffmanDecodingException(); // dst full.
-                        dst[dstIndex++] = (byte)(-tableIndex);
-                        tableIndex = 0;
-                        isPadding = 1;
-                        paddingBits = 0;
-                    }
+                    throw new HuffmanDecodingException(); // Invalid symbol.
                 }
             }
 
-            if (paddingBits <= 7 && isPadding == 1)
-                return dstIndex;
+            var ones = (byte)(byte.MaxValue >> (7 - consumedBits + 1));
+            if ((byt & ones) != ones)
+                throw new HuffmanDecodingException(); // No padding.
+            if (consumedBits > 7 && tableIndex != 0)
+                throw new HuffmanDecodingException(); // Too much padding.
 
-            throw new HuffmanDecodingException(); // Too much padding.
+            return dstIndex;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static bool DecodeBit(in ushort[] table, in byte byt, int bit, ref byte consumedBits, ref ushort tableIndex, in byte[] dst, ref int dstIndex)
+        {
+            bit = byt >> bit;
+            bit &= 0x1;
+            consumedBits++;
+
+            tableIndex = table[tableIndex + bit];
+
+            if ((tableIndex & Character) != 0)
+            {
+                if (dstIndex == dst.Length)
+                    return false;
+                var chr = tableIndex & ~Character;
+                if (chr == 256)
+                    return false;
+                dst[dstIndex++] = (byte)chr;
+                tableIndex = 0;
+                consumedBits = 0;
+            }
+
+            if (tableIndex >= table.Length)
+            {
+                if (tableIndex == table.Length)
+                    return false;
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -459,17 +499,17 @@ namespace HuffmanTest
                 var bit = data >> shift;
                 bit &= 0x1;
 
-                index += table[index + bit];
+                index = table[index + bit];
 
-                if (index < -256)
+                if ((index & Character) != 0)
+                {
+                    decodedBits = bitIndex + 1;
+                    return index & ~Character;
+                }
+                if (index >= table.Length)
                 {
                     decodedBits = 0;
                     return -1;
-                }
-                else if (index <= 0)
-                {
-                    decodedBits = bitIndex + 1;
-                    return -index;
                 }
             }
 

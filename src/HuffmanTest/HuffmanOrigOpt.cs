@@ -489,9 +489,10 @@ namespace HuffmanTest
             var result = -1;
             decodedBits = 0;
 
-            for (var i = 0; i < s_decodingTable.Length; i++)
+            var table = s_decodingTable;
+            for (var i = 0; i < table.Length; i++)
             {
-                var (codeLength, codeMax, mask, codes) = s_decodingTable[i];
+                var (codeLength, codeMax, mask, codes) = table[i];
                 if (codeLength > validBits)
                     break;
 
