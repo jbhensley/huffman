@@ -470,7 +470,7 @@ namespace HuffmanTest
             => DecodeImpl(s_decodingTable, data, validBits, out decodedBits);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int DecodeImpl(in (byte, int, int, byte[])[] table, in uint data, in int validBits, out int decodedBits)
+        private static int DecodeImpl((byte, int, int, byte[])[] table, in uint data, in int validBits, out int decodedBits)
         {
             // The code below implements the decoding logic for a canonical Huffman code.
             //
