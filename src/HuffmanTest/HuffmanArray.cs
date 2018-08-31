@@ -470,7 +470,9 @@ namespace HuffmanTest
                     // let's see if anyone before us has already claimed a sub-array with our bit pattern
                     var subArrayIndex = s_decodingArray[currentArrayIndex][codeByte];
 
-                    // negative values are used as pointers to the next array. zeros are unused. positive values are a successful decode
+                    // - negative values are used as pointers to the next array
+                    // 0 zeros are unused
+                    // + positive values are a successful decode
                     if (subArrayIndex < 0)
                     {
                         subArrayIndex = (short)-subArrayIndex;

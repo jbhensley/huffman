@@ -7,6 +7,7 @@ namespace HuffmanTest
         static void Main(string[] args)
         {
             var bench = new HuffmanBench();
+
             var summary = BenchmarkRunner.Run<HuffmanBench>();
 
             //bench.Setup();
