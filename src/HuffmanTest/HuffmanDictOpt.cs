@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace HuffmanTest
 {
@@ -21,7 +21,7 @@ namespace HuffmanTest
 
         // TODO: this can be constructed from _decodingTable
         private static readonly (uint code, int bitLength)[] s_encodingTable = new (uint code, int bitLength)[]
-         {
+        {
             // 0
             (0b11111111_11000000_00000000_00000000, 13),
 
@@ -336,9 +336,6 @@ namespace HuffmanTest
             (0b11111111_11111111_11111111_11111100, 30)
         };
 
-        static HuffmanDictOpt()
-        { }
-
         public static (uint encoded, int bitLength) Encode(int data) => s_encodingTable[data];
 
         /// <summary>
@@ -406,7 +403,7 @@ namespace HuffmanTest
                 if (validBits > 30)
                     validBits = 30; // Equivalent to Math.Min(30, validBits)
 
-                var ch = Decode(next, validBits, out var decodedBits);
+                var ch = DecodeImpl(s_decodingDictionary, next, validBits, out var decodedBits);
 
                 if (ch == -1 || ch == 256)
                 {
@@ -431,6 +428,10 @@ namespace HuffmanTest
         }
 
         public static int Decode(uint data, int validBits, out int decodedBits)
+            => DecodeImpl(s_decodingDictionary, data, validBits, out decodedBits);
+
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int DecodeImpl(in Dictionary<uint, DecodingTableEntry> dict, in uint data, in int validBits, out int decodedBits)
         {
             int byteNumber = 3;                      // grab the most significant byte
             uint virtualDictionaryMask = 0;          // used to key into different "virtual" dictionaries
@@ -445,7 +446,7 @@ namespace HuffmanTest
                     workingByte |= virtualDictionaryMask;
 
                 // key into the dictionary
-                if (!s_decodingDictionary.TryGetValue(workingByte, out entry))
+                if (!dict.TryGetValue(workingByte, out entry))
                     break;  // we should either get an entry or bitmask for the next virtual dictionary. if we get neither then
                             // the bit pattern is not consistent with any entry we have
 
