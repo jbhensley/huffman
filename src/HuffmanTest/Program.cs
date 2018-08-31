@@ -9,11 +9,11 @@ namespace HuffmanTest
             var bench = new HuffmanBench();
             var summary = BenchmarkRunner.Run<HuffmanBench>();
 
-            //var tests = new HuffmanTests();
-            //tests.SetupPerfTest();
-            //tests.ProcessHeadersWithLoop();
-            //tests.ProcessHeadersWithLoopAndComputedCodeMax();
-            //tests.ProcessHeadersWithDictionary();
+            //bench.Setup();
+            //for (var i = 0; i < 20_000; i++)
+            //{
+            //    bench.OrigOpt();
+            //}
 
             //Console.WriteLine("Finished");
             //Console.ReadLine();

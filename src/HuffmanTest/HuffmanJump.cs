@@ -363,7 +363,7 @@ namespace HuffmanTest
             return table.ToArray();
         }
 
-        private static void Set(List<ushort> table, uint code, byte bitLength, ushort chr)
+        private static void Set(in List<ushort> table, in uint code, in byte bitLength, in ushort chr)
         {
             var index = 0;
             for (var bitPosition = 0; bitPosition < bitLength; bitPosition++)

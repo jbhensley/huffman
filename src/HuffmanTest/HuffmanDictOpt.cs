@@ -430,8 +430,8 @@ namespace HuffmanTest
         public static int Decode(uint data, int validBits, out int decodedBits)
             => DecodeImpl(s_decodingDictionary, data, validBits, out decodedBits);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int DecodeImpl(Dictionary<uint, DecodingTableEntry> dict, in uint data, in int validBits, out int decodedBits)
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int DecodeImpl(in Dictionary<uint, DecodingTableEntry> dict, in uint data, in int validBits, out int decodedBits)
         {
             int byteNumber = 3;                      // grab the most significant byte
             uint virtualDictionaryMask = 0;          // used to key into different "virtual" dictionaries
