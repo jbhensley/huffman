@@ -271,7 +271,8 @@ namespace HuffmanTest
             (0b11111111_11111111_11111111_11111100, 30)
         };
 
-        public static readonly short[][] s_decodingArray = new short[15][];
+        private static readonly short[][] s_decodingArray = new short[15][];
+        private static readonly byte[] s_bitLengthArray = new byte[257];
 
         public static (uint encoded, int bitLength) Encode(int data) => s_encodingTable[data];
 
@@ -290,7 +291,6 @@ namespace HuffmanTest
             var lastDecodedBits = 0;
             var edgeIndex = count - 1;
             var decodingArray = s_decodingArray;
-            var encodingTable = s_encodingTable;
 
             while (i < count)
             {
@@ -339,10 +339,9 @@ namespace HuffmanTest
                 // of the input, we need to make sure we pass the correct number of valid bits
                 // left, otherwise the trailing 0s in next may form a valid symbol.
                 var validBits = remainingBits + ((edgeIndex - i) << 3); // * 8
-                if (validBits > 30)
-                    validBits = 30; // Equivalent to Math.Min(30, validBits)
+                if (validBits > 30) validBits = 30; // Equivalent to Math.Min(30, validBits)
 
-                var ch = DecodeImpl(decodingArray, encodingTable, next, validBits, out var decodedBits);
+                var ch = DecodeImpl(decodingArray, next, validBits, out var decodedBits);
                 if (ch == -1 || ch == 256)
                 {
                     // -1: No valid symbol could be decoded with the bits in next.
@@ -378,10 +377,10 @@ namespace HuffmanTest
         /// <param name="decodedBits">The number of bits decoded from <paramref name="data"/>.</param>
         /// <returns>The decoded symbol.</returns>
         public static int Decode(uint data, int validBits, out int decodedBits)
-            => DecodeImpl(s_decodingArray, s_encodingTable, data, validBits, out decodedBits);
+            => DecodeImpl(s_decodingArray, data, validBits, out decodedBits);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int DecodeImpl(short[][] decodingArray, (uint code, byte bitLength)[] encodingTable, in uint data, in int validBits, out int decodedBits)
+        private static int DecodeImpl(in short[][] decodingArray, in uint data, in int validBits, out int decodedBits)
         {
             var arrayIndex = 0;
 
@@ -389,19 +388,19 @@ namespace HuffmanTest
             // Grab data one byte at a time starting at the left
             // Unroll loop
 
-            var value = DecodeImpl(decodingArray, encodingTable, (data >> 24) & 0xFF, ref arrayIndex, validBits, out decodedBits);
+            var value = DecodeImpl(decodingArray, (data >> 24) & 0xFF, ref arrayIndex, validBits, out decodedBits);
             if (value >= 0) return value;
             if (value == -2) return -1;
 
-            value = DecodeImpl(decodingArray, encodingTable, (data >> 16) & 0xFF, ref arrayIndex, validBits, out decodedBits);
+            value = DecodeImpl(decodingArray, (data >> 16) & 0xFF, ref arrayIndex, validBits, out decodedBits);
             if (value >= 0) return value;
             if (value == -2) return -1;
 
-            value = DecodeImpl(decodingArray, encodingTable, (data >> 8) & 0xFF, ref arrayIndex, validBits, out decodedBits);
+            value = DecodeImpl(decodingArray, (data >> 8) & 0xFF, ref arrayIndex, validBits, out decodedBits);
             if (value >= 0) return value;
             if (value == -2) return -1;
 
-            value = DecodeImpl(decodingArray, encodingTable, (data >> 0) & 0xFF, ref arrayIndex, validBits, out decodedBits);
+            value = DecodeImpl(decodingArray, (data >> 0) & 0xFF, ref arrayIndex, validBits, out decodedBits);
             if (value >= 0) return value;
 
             // no luck. signal to caller that we could not decode
@@ -409,7 +408,7 @@ namespace HuffmanTest
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int DecodeImpl(short[][] decodingArray, (uint code, byte bitLength)[] encodingTable, in uint workingByte, ref int arrayIndex, in int validBits, out int decodedBits)
+        private static int DecodeImpl(in short[][] decodingArray, in uint workingByte, ref int arrayIndex, in int validBits, out int decodedBits)
         {
             decodedBits = 0;
 
@@ -428,7 +427,7 @@ namespace HuffmanTest
             // else: value is a successful decode
 
             // use value to index into the encoding table
-            var bitLength = encodingTable[value].bitLength;
+            var bitLength = s_bitLengthArray[value];
             if (bitLength > validBits)
                 return -2; // we only found a value by incorporating bits beyond the the valid remaining length of the data stream
 
@@ -445,6 +444,8 @@ namespace HuffmanTest
             {
                 var (code, bitLength) = s_encodingTable[i]; // keep from having to do "s_encodingTable[i]" everywhere
                 var currentArrayIndex = 0; // which array are we working with
+
+                s_bitLengthArray[i] = bitLength;
 
                 // loop for however many bytes the value occupies
                 for (var j = 0; j <= Math.Ceiling(bitLength / 8.0); j++)

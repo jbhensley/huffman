@@ -147,7 +147,7 @@ namespace HuffmanTest
             return sum;
         }
 
-        [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
+        //[Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
         public ulong OrigOpt()
         {
             var sum = 0ul;
@@ -356,7 +356,6 @@ namespace HuffmanTest
                     }
                     else
                     {
-
                         // the next virtual dictionary is identified by the level and current working byte pattern
                         uint nextVirtualDictionaryMask =
                             nextLevel                        // next level goes in most significant byte
