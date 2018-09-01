@@ -13,7 +13,7 @@ namespace HuffmanTest
             //bench.Setup();
             //for (var i = 0; i < 20_000; i++)
             //{
-            //    bench.OrigOpt();
+            //    bench.Array();
             //}
 
             //Console.WriteLine("Finished");

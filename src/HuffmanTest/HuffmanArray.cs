@@ -294,6 +294,8 @@ namespace HuffmanTest
 
             while (i < count)
             {
+                var remainingBits = 8 - lastDecodedBits;
+
                 var next = (uint)(src[i] << 24 + lastDecodedBits);
                 if (i + 1 < src.Length)
                 {
@@ -309,13 +311,11 @@ namespace HuffmanTest
 
                             if (i + 4 < src.Length)
                             {
-                                next |= (uint)(src[i + 4] >> (8 - lastDecodedBits));
+                                next |= (uint)(src[i + 4] >> remainingBits);
                             }
                         }
                     }
                 }
-
-                var remainingBits = 8 - lastDecodedBits;
 
                 // The remaining 7 or less bits are all 1, which is padding.
                 // We specifically check that lastDecodedBits > 0 because padding
