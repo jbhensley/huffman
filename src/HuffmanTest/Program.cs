@@ -29,11 +29,13 @@ namespace HuffmanTest
 
             //HuffmanArray.BuildDecodingArray();
             //HuffmanArray.VerifyDecodingArray();
+            //bench.Setup();
+            //bench.Array();
 
             //CheckHuffman();
 
-            Console.WriteLine("Finished");
-            Console.ReadLine();
+            //Console.WriteLine("Finished");
+            //Console.ReadLine();
         }
 
         static void CheckHuffman()

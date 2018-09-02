@@ -78,7 +78,7 @@ namespace HuffmanTest
         };
 
         private const int _headerCount = 350; // From line-count in headers.txt
-        private static readonly (byte[] encoded, string decodedValue)[] s_headerData = new (byte[], string)[_headerCount];
+        public static readonly (byte[] encoded, string decodedValue)[] s_headerData = new (byte[], string)[_headerCount];
 
         [GlobalSetup]
         public void Setup()
@@ -123,14 +123,14 @@ namespace HuffmanTest
                 for (var j = 0; j < _iterations; j++)
                 {
                     // Simple
-                    for (var i = 0; i < s_simpleData.Length; i++)
-                    {
-                        var encoded = s_simpleData[i].encoded;
-                        //var expected = _test[i].expected;
+                    //for (var i = 0; i < s_simpleData.Length; i++)
+                    //{
+                    //    var encoded = s_simpleData[i].encoded;
+                    //    //var expected = _test[i].expected;
 
-                        var actualLength = HuffmanJump.Decode(encoded, 0, encoded.Length, rented);
-                        sum += (uint)actualLength;
-                    }
+                    //    var actualLength = HuffmanJump.Decode(encoded, 0, encoded.Length, rented);
+                    //    sum += (uint)actualLength;
+                    //}
 
                     // Headers
                     for (var i = 0; i < s_headerData.Length; i++)
@@ -225,14 +225,14 @@ namespace HuffmanTest
                 for (var j = 0; j < _iterations; j++)
                 {
                     // Simple
-                    for (var i = 0; i < s_simpleData.Length; i++)
-                    {
-                        var encoded = s_simpleData[i].encoded;
-                        //var expected = _test[i].expected;
+                    //for (var i = 0; i < s_simpleData.Length; i++)
+                    //{
+                    //    var encoded = s_simpleData[i].encoded;
+                    //    //var expected = _test[i].expected;
 
-                        var actualLength = HuffmanDict.Decode(encoded, 0, encoded.Length, rented);
-                        sum += (uint)actualLength;
-                    }
+                    //    var actualLength = HuffmanDict.Decode(encoded, 0, encoded.Length, rented);
+                    //    sum += (uint)actualLength;
+                    //}
 
                     // Headers
                     for (var i = 0; i < s_headerData.Length; i++)
@@ -259,14 +259,14 @@ namespace HuffmanTest
                 for (var j = 0; j < _iterations; j++)
                 {
                     // Simple
-                    for (var i = 0; i < s_simpleData.Length; i++)
-                    {
-                        var encoded = s_simpleData[i].encoded;
-                        //var expected = _test[i].expected;
+                //    for (var i = 0; i < s_simpleData.Length; i++)
+                //    {
+                //        var encoded = s_simpleData[i].encoded;
+                //        //var expected = _test[i].expected;
 
-                        var actualLength = HuffmanOrig.Decode(encoded, 0, encoded.Length, rented);
-                        sum += (uint)actualLength;
-                    }
+                //        var actualLength = HuffmanOrig.Decode(encoded, 0, encoded.Length, rented);
+                //        sum += (uint)actualLength;
+                //    }
 
                     // Headers
                     for (var i = 0; i < s_headerData.Length; i++)
@@ -293,20 +293,20 @@ namespace HuffmanTest
                 for (var j = 0; j < _iterations; j++)
                 {
                     // Simple
-                    for (var i = 0; i < s_simpleData.Length; i++)
-                    {
-                        var encoded = s_simpleData[i].encoded;
-                        //var expected = _test[i].expected;
+                    //for (var i = 0; i < s_simpleData.Length; i++)
+                    //{
+                    //    var encoded = s_simpleData[i].encoded;
+                    //    //var expected = _test[i].expected;
 
-                        var actualLength = HuffmanArray.Decode(encoded, 0, encoded.Length, rented);
-                        sum += (uint)actualLength;
-                    }
+                    //    var actualLength = HuffmanArray.Decode(encoded, 0, encoded.Length, rented);
+                    //    sum += (uint)actualLength;
+                    //}
 
                     // Headers
                     for (var i = 0; i < s_headerData.Length; i++)
                     {
                         var encoded = s_headerData[i].encoded;
-
+                            
                         var actualLength = HuffmanArray.Decode(encoded, 0, encoded.Length, rented);
                         sum += (uint)actualLength;
                     }
