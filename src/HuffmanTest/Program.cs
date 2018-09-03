@@ -10,7 +10,7 @@ namespace HuffmanTest
     {
         static void Main(string[] args)
         {
-            var bench = new HuffmanBench();
+            //var bench = new HuffmanBench();
 
             // Profiling
             //bench.Setup();
@@ -19,7 +19,7 @@ namespace HuffmanTest
             //    bench.Array();
             //}
 
-            var summary = BenchmarkRunner.Run<HuffmanBench>();
+            //var summary = BenchmarkRunner.Run<HuffmanBench>();
 
             //bench.Setup();
             //for (var i = 0; i < 20_000; i++)
@@ -27,21 +27,22 @@ namespace HuffmanTest
             //    bench.OrigOpt();
             //}
 
-            //HuffmanArray.BuildDecodingArray();
             //HuffmanArray.VerifyDecodingArray();
             //bench.Setup();
             //bench.Array();
 
             //CheckHuffman();
 
-            //Console.WriteLine("Finished");
-            //Console.ReadLine();
+            HuffmanTester.RunArrayTests();
+
+            Console.WriteLine("Finished");
+            Console.ReadLine();
         }
 
         static void CheckHuffman()
         {
-            var bench = new HuffmanBench();
-            bench.Setup();
+            //var bench = new HuffmanBench();
+            //bench.Setup();
 
             foreach (var entry in HuffmanBench.s_headerData)
             {

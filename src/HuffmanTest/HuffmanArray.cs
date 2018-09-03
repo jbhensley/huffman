@@ -268,7 +268,8 @@ namespace HuffmanTest
             (0b11111111_11111111_11111111_11111100, 30)
         };
 
-        public static int[,] s_decodingArray = new int[15, 256];
+        private static readonly Lazy<int[,]> s_decodingArrayLoader = new Lazy<int[,]>(() => BuildDecodingArray());
+        private static int[,] s_decodingArray => s_decodingArrayLoader.Value;
 
         public static (uint encoded, int bitLength) Encode(int data)
         {
@@ -550,8 +551,10 @@ namespace HuffmanTest
             return -1;
         }
 
-        public static void BuildDecodingArray()
+        private static int[,] BuildDecodingArray()
         {
+            var array = new int[15, 256];
+            
             int nextAvailableSubIndex = 1;
             // loop through each entry in the encoding table and create entries for it in our decoding array
             for (int i = 0; i < 256; i++)   // we're only going to 255. the EOS pattern of 256 (which will not fit into a byte) will be left out.
@@ -574,14 +577,14 @@ namespace HuffmanTest
                         int loopMax = 0x1 << (totalLength - tableEntry.bitLength); // have to create entries for all of these values
                         int value = (tableEntry.bitLength << 8) | i;    // store the length and value in two separate positions
                         for (uint k = 0; k < loopMax; k++)
-                            s_decodingArray[currentArrayIndex, codeByte + k] = value;   // each entry returns the same value
+                            array[currentArrayIndex, codeByte + k] = value;   // each entry returns the same value
 
                         break;  // we're done with this entry. bail on the loop
                     }
                     // else: we need to split the entry into one or more sub-arrays
 
                     // let's see if anyone before us has already claimed a sub-array with our bit pattern
-                    int subArrayIndex = s_decodingArray[currentArrayIndex, codeByte];
+                    int subArrayIndex = array[currentArrayIndex, codeByte];
 
                     // negative values are used as pointers to the next array. zeros are unused. positive values are a successful decode
                     if (subArrayIndex < 0)
@@ -589,12 +592,14 @@ namespace HuffmanTest
                     else
                     {
                         subArrayIndex = nextAvailableSubIndex++;    // if no one has our bit battern then we'll stake our claim on the next available array
-                        s_decodingArray[currentArrayIndex, codeByte] = -subArrayIndex;  // blaze the trail for the next guy
+                        array[currentArrayIndex, codeByte] = -subArrayIndex;  // blaze the trail for the next guy
                     }
 
                     currentArrayIndex = subArrayIndex;  // we've left a pointer behind us and we're moving on to the next array
                 }
             }
+
+            return array;
         }
 
         public static void VerifyDecodingArray()
