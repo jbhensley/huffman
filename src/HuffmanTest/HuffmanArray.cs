@@ -309,12 +309,10 @@ namespace HuffmanTest
                     // borrow some bits if we need to
                     if (bitOffset > 0)
                         workingByte |= (byte)((sourceIndex < sourceSpan.Length - 1 ? sourceSpan[sourceIndex + 1] : 0) >> (8 - bitOffset));
-
-
-
-                    // attempt to decode
-                    int decodedValue = Decode(workingByte, arrayIndex, out int decodedBits);
-
+                    
+                    // key into array
+                    int decodedValue = s_decodingArray[arrayIndex, workingByte];
+                    
                     // negative values are a pointer to the next decoding array
                     if (decodedValue < 0)
                     {
@@ -325,9 +323,12 @@ namespace HuffmanTest
                     else
                     // we have decoded a character
                     {
+                        int decodedBits = decodedValue >> 8;    // length is in the second LSB
+                        decodedValue &= 0xFF;                   // value is in the LSB
+
                         // A Huffman-encoded string literal containing the EOS symbol MUST be treated as a decoding error.
                         // http://httpwg.org/specs/rfc7541.html#rfc.section.5.2
-                        if (decodedValue > 256)
+                        if (decodedValue > 256) // TODO: should this be >=
                             throw new HuffmanDecodingException();
 
                         // Destination is too small.
@@ -401,112 +402,7 @@ namespace HuffmanTest
             return decodedBytes;
             
         }
-        public static int Decode(byte data, int arrayIndex, out int decodedBits)
-        {
-            decodedBits = 0;
-            
-            // key into array
-            int value = s_decodingArray[arrayIndex, data];
-
-            // if the value is positive then we have the bit length and character code
-            if (value > -1)
-            {
-                int bitLength = value >> 8; // length is in the second LSB
-
-                decodedBits = bitLength;
-                return value & 0xFF;   // value is in the LSB
-            }
-
-            // pointer to the next array will be stored as a negative
-            return value;
-        }
-        public static int DecodeNew(byte[] src, int offset, int count, byte[] dst)
-        {
-            // TODO: should we put argument checks here? (e.g. offset > -1; count > -1; src != null; dst != null; etc)
-            //       i assume values like count==0 are valid, even though they might not make sense in terms of calling
-            //       the method when you don't actually want anything back
-
-            int dstIndex = 0;
-            int bitOffset = 0;
-            int totalDecodedBytes = 0;
-
-            /*
-             *   TODO:    resolve how we should handle count here      
-             *      we should honor the caller's request to only decode a certain number of bytes. however, how does
-             *      borrowing bits from the neighboring byte fit in to that? let's say that we're working on the last byte
-             *      that count allows us to take, but we have already borrowed bits from it to fill the byte immediately
-             *      before it. essentially, we no longer have a full byte. do we borrow from the next byte in the buffer
-             *      or do we consider it off limits? if it is off limits, do we toss a decoding error because the last byte
-             *      could not be decoded by itself? it's no longer clear what "decode only 4 bytes" means when we are crossing
-             *      byte boundaries
-             */
-
-            // loop until we either reach the end of the buffer, we've decoded the specified count of bytes or we hit the end of the destination buffer
-            while (offset < src.Length &&  totalDecodedBytes < count && dstIndex < dst.Length)    // it's possible for the caller to specify count=0, in which case we should decoding nothing
-            {   
-                int arrayIndex = 0;     // index into decoding table array
-                int length = 0;
-
-                // decode in a max of 4
-                for (int i = 0; i < 4; i++)
-                {
-                    // grab the working byte and make room for any bits we have to borrow from its neighbor
-                    byte byteValue = (byte)(src[offset] << bitOffset);
-
-                    // borrow some bits form the neighbor (or pad with ones if we're on the last byte) if we're not aligned to a byte
-                    if (bitOffset > 0)
-                        byteValue |= (byte)(((offset < src.Length - 1) ? src[offset + 1] : int.MinValue) >> (8 - bitOffset)); // e.g. 0b10101101 and borrow 5 means shift him to the right by 3 to get 0b00010101 and | into the slot already provided above
-
-                    // key into array
-                    int value = s_decodingArray[arrayIndex, byteValue];
-
-                    // if the value is positive then we have the bit length and character code
-                    if (value > -1)
-                    {
-                        length = value >> 8; // length is in the second LSB
-                        bitOffset += length - (i * 8);
-
-                        // store the value and increment the destination index after
-                        dst[dstIndex++] = (byte)(value & 0xFF);    // value is in the LSB
-
-                        // if our offset crosses a byte boundary then we move to the next byte and reseet
-                        if (bitOffset >= 8)
-                        {
-                            offset++;
-                            bitOffset &= 7;
-                            totalDecodedBytes++;
-                        }
-
-                        break;
-                    }
-
-                    // pointer to the next array will be stored as a negative
-                    arrayIndex = -value;
-                    totalDecodedBytes++;
-
-                    // if we got a pointer to the next array then we consumed all of the remaining bits in the working byte.
-                    // move on to the next byte, but make sure we don't go past the end of the buffer.
-                    // we will still need to continue to borrow the same number bits from our neighbor if we were borrowing before
-                    if (++offset >= src.Length)
-                        break;  // TODO: need to fix case when 8 or more bits of padding are present. this will require that we keep track of
-                                // how many consecutive bits are set as we tunnel our way through the array
-                }
-
-                // No valid symbol could be decoded with the bits. This also includes cases where the symbol is EOS (which we don't store in the decoding table)
-                // This squares up with the original implementation, which contained this comment:            
-                //       A Huffman-encoded string literal containing the EOS symbol MUST be treated as a decoding error.
-                //       http://httpwg.org/specs/rfc7541.html#rfc.section.5.2
-                if (length == 0)
-                    throw new HuffmanDecodingException();
-            }
-
-            // see if we hit the end of the source buffer or the destination buffer before we could decode   // all of the values
-            if(totalDecodedBytes + (bitOffset > 0 ? 1 : 0) < count)
-                throw new HuffmanDecodingException();
-
-            return dstIndex;
-        }
-
+     
         /// <summary>
         /// Decodes a single symbol from a 32-bit word.
         /// </summary>
