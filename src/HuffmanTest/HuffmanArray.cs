@@ -294,14 +294,14 @@ namespace HuffmanTest
             var sourceSpan = new Span<byte>(src, offset, count);
             int sourceIndex = 0;
             int destinationIndex = 0;
-            int decodedBytes = 0;
-            int bitOffset = 0;
+            int decodedBytes = 0;           // count of bytes we have decoded
+            int bitOffset = 0;              // symbol bit patterns do not necessarily align to byte boundaries. need to keep track of our offset within a byte
             while (sourceIndex < sourceSpan.Length)
-            {
-                // decode in a max of 4
-                int arrayIndex = 0;
-                bool didDecode = false;
+            {   
+                int arrayIndex = 0;         // index into the decoding array
+                bool didDecode = false;     // way to track whether we decoded a value (might be able to eliminte by looking at other values)
 
+                // decoding a symbol will take a maximum of four bytes (longest symbol is represented by a 30 bit pattern)
                 for (int i = 0; i < 4; i++)
                 {
                     // grab the next byte and push it over to make room for bits we have to borrow
@@ -326,14 +326,22 @@ namespace HuffmanTest
                         int decodedBits = decodedValue >> 8;    // length is in the second LSB
                         decodedValue &= 0xFF;                   // value is in the LSB
 
-                        // A Huffman-encoded string literal containing the EOS symbol MUST be treated as a decoding error.
-                        // http://httpwg.org/specs/rfc7541.html#rfc.section.5.2
-                        if (decodedValue > 256) // TODO: should this be >=
+                        ////////////////////////////////////
+                        // validate the decoded value
+                        ////////////////////////////////////
+                        if (decodedValue == 256)
+                        {
+                            // A Huffman-encoded string literal containing the EOS symbol MUST be treated as a decoding error.
+                            // http://httpwg.org/specs/rfc7541.html#rfc.section.5.2
                             throw new HuffmanDecodingException();
+                        }
 
-                        // Destination is too small.
                         if (destinationIndex == dst.Length)
+                        {
+                            // Destination is too small.
                             throw new HuffmanDecodingException();
+                        }
+                        ////////////////////////////////////
 
                         // store the decoded value and increment total decoded byte count
                         dst[destinationIndex++] = (byte)decodedValue;
@@ -358,28 +366,6 @@ namespace HuffmanTest
                     throw new HuffmanDecodingException();
 
                 // check for padding in the last byte before we loop back around and try to decode again
-                /*
-                 *      TODO: review this logic
-                 *            padding is used to re-align with byte boundary at the end. if we take previous
-                 *            byte alignment out of the equation then this is simple: a final byte consisting
-                 *            of 8 set bits is an error; it should have just been left out entirely. things get
-                 *            messy when we start dealing with offset. consider:
-                 *            
-                 *            src[len-2] = 0101 1111     -- the first four being data and the last four padding
-                 *            
-                 *            but then the caller adds one more byte:
-                 *            
-                 *            src[len-1] = 1111 0000     -- first four are more padding and the last four are zeros for whatever reason
-                 *            
-                 *            technically, there is a padding sequence of 8 bits here. however, that last byte
-                 *            should not have even been added since it was not necessary and carries no data.
-                 *            
-                 *            i think that what we are really checking for is whether the remaning bits are
-                 *            padding so we know to terminate the loop and to ensure that the caller did not
-                 *            fully pad an entire byte because that is unnecessary. a sequence like that above
-                 *            will either toss a decoding error or, possibly, decode to an unintended character.
-                 *            the question is: should we look for that specific sceanrio and force a decoding error?
-                 */
                 if (sourceIndex == sourceSpan.Length - 1)
                 {
                     
@@ -387,20 +373,19 @@ namespace HuffmanTest
                     int paddingMask = (0x1 << (8 - bitOffset)) - 1;
                     if ((sourceSpan[sourceIndex] & paddingMask) == paddingMask)
                     {
+                        // if our bitOffset is zero then all of bits in this byte are set
                         // "A padding strictly longer than 7 bits MUST be treated as a decoding error."
                         // https://httpwg.org/specs/rfc7541.html#rfc.section.5.2
-
-                        //  **** however, see comment above. is it still considered padding if zeros follow? ****
                         if (bitOffset == 0)
                             throw new HuffmanDecodingException();
 
+                        // otherwise (padding less than 8), just break out of the main loop because we are done
                         break;
                     }
                 }
             }
 
             return decodedBytes;
-            
         }
      
         /// <summary>
