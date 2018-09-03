@@ -294,12 +294,11 @@ namespace HuffmanTest
             var sourceSpan = new Span<byte>(src, offset, count);
             int sourceIndex = 0;
             int destinationIndex = 0;
-            int decodedBytes = 0;           // count of bytes we have decoded
             int bitOffset = 0;              // symbol bit patterns do not necessarily align to byte boundaries. need to keep track of our offset within a byte
             while (sourceIndex < sourceSpan.Length)
             {   
                 int arrayIndex = 0;         // index into the decoding array
-                bool didDecode = false;     // way to track whether we decoded a value (might be able to eliminte by looking at other values)
+                int decodedBits = 0;
 
                 // decoding a symbol will take a maximum of four bytes (longest symbol is represented by a 30 bit pattern)
                 for (int i = 0; i < 4; i++)
@@ -323,8 +322,8 @@ namespace HuffmanTest
                     else
                     // we have decoded a character
                     {
-                        int decodedBits = decodedValue >> 8;    // length is in the second LSB
-                        decodedValue &= 0xFF;                   // value is in the LSB
+                        decodedBits = decodedValue >> 8;    // length is in the second LSB
+                        decodedValue &= 0xFF;               // value is in the LSB
 
                         ////////////////////////////////////
                         // validate the decoded value
@@ -343,26 +342,28 @@ namespace HuffmanTest
                         }
                         ////////////////////////////////////
 
-                        // store the decoded value and increment total decoded byte count
+                        // store the decoded value and increment destinationIndex
                         dst[destinationIndex++] = (byte)decodedValue;
-                        decodedBytes++;
 
-                        // if we decoded more bits than we are borrowing then advance to next byte
+                        // if we decoded more bits than we are borrowing then advance to next byte.
+                        // subtract (8 * i) because we only care about how many bits were decoded in the last byte.
+                        // e.g. we are borrowing 5 bits and decoded a 13 bit symbol
+                        //      decodedBits - (8 * i) == 5      (i == 1)
+                        //      8 - bitOffset == 3              (there were only 3 bits left in this byte, the rest were borrowed)
+                        //      no bits left in this byte so we need to roll forward to the next and re-align bitOffset
                         if (decodedBits - (8 * i) >= 8 - bitOffset)
                             sourceIndex++;
 
                         // calculate and re-align bitOffset
                         bitOffset += decodedBits;
                         bitOffset &= 7; // same as modulo 8
-
-                        didDecode = true;
-
+                        
                         break;
                     }
                 }
 
                 // we checked four bytes did not come up with a valid bit pattern
-                if (!didDecode)
+                if (decodedBits == 0)
                     throw new HuffmanDecodingException();
 
                 // check for padding in the last byte before we loop back around and try to decode again
@@ -385,7 +386,7 @@ namespace HuffmanTest
                 }
             }
 
-            return decodedBytes;
+            return destinationIndex;    // destinationIndex is incremented each time a value is decoded, so it also represents total decoded byte count
         }
      
         /// <summary>
