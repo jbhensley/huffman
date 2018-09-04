@@ -325,22 +325,10 @@ namespace HuffmanTest
                         decodedBits = decodedValue >> 8;    // length is in the second LSB
                         decodedValue &= 0xFF;               // value is in the LSB
 
-                        ////////////////////////////////////
-                        // validate the decoded value
-                        ////////////////////////////////////
-                        if (decodedValue == 256)
-                        {
-                            // A Huffman-encoded string literal containing the EOS symbol MUST be treated as a decoding error.
-                            // http://httpwg.org/specs/rfc7541.html#rfc.section.5.2
-                            throw new HuffmanDecodingException();
-                        }
 
+                        // Destination is too small.
                         if (destinationIndex == dst.Length)
-                        {
-                            // Destination is too small.
                             throw new HuffmanDecodingException();
-                        }
-                        ////////////////////////////////////
 
                         // store the decoded value and increment destinationIndex
                         dst[destinationIndex++] = (byte)decodedValue;
@@ -486,7 +474,7 @@ namespace HuffmanTest
 
         public static void VerifyDecodingArray()
         {
-            for (int i = 0; i < s_encodingTable.Length - 1; i++)
+            for (int i = 0; i < s_encodingTable.Length - 1; i++)    // Length -1 because the last entry is the EOS symbol, which must not be used
             {
                 (uint code, int bitLength) = s_encodingTable[i];
                 int decoded = Decode(code, bitLength, out int decodedBits);
