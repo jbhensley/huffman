@@ -268,8 +268,8 @@ namespace HuffmanTest
             (0b11111111_11111111_11111111_11111100, 30)
         };
 
-        private static readonly Lazy<int[,]> s_decodingArrayLoader = new Lazy<int[,]>(() => BuildDecodingArray());
-        private static int[,] s_decodingArray => s_decodingArrayLoader.Value;
+        private static readonly Lazy<short[,]> s_decodingArrayLoader = new Lazy<short[,]>(() => BuildDecodingArray());
+        //public static short[,] s_decodingArray => s_decodingArrayLoader.Value;
 
         public static (uint encoded, int bitLength) Encode(int data)
         {
@@ -291,10 +291,11 @@ namespace HuffmanTest
             //  
 
             // let's narrow thing down to just the part of the source buffer that we've been asked to decode
-            var sourceSpan = new Span<byte>(src, offset, count);
+            var sourceSpan = new ReadOnlySpan<byte>(src, offset, count);
             int sourceIndex = 0;
             int destinationIndex = 0;
             int bitOffset = 0;              // symbol bit patterns do not necessarily align to byte boundaries. need to keep track of our offset within a byte
+            var decodingArray = s_decodingArrayLoader.Value;
             while (sourceIndex < sourceSpan.Length)
             {   
                 int arrayIndex = 0;         // index into the decoding array
@@ -310,7 +311,7 @@ namespace HuffmanTest
                         workingByte |= (byte)((sourceIndex < sourceSpan.Length - 1 ? sourceSpan[sourceIndex + 1] : 0) >> (8 - bitOffset));
                     
                     // key into array
-                    int decodedValue = s_decodingArray[arrayIndex, workingByte];
+                    int decodedValue = decodingArray[arrayIndex, workingByte];
                     
                     // negative values are a pointer to the next decoding array
                     if (decodedValue < 0)
@@ -393,13 +394,14 @@ namespace HuffmanTest
         {
             // decode in a max of 4
             int arrayIndex = 0;
+            var decodingArray = s_decodingArrayLoader.Value;
             for (int i = 0; i < 4; i++)
             {
                 // grab data one byte at a time starting at the left
                 uint workingByte = data >> (8 * (3 - i)) & 0xFF;
 
                 // key into array
-                int value = s_decodingArray[arrayIndex, workingByte];
+                int value = decodingArray[arrayIndex, workingByte];
 
                 // if the value is positive then we have the bit length and character code
                 if (value > -1)
@@ -421,9 +423,9 @@ namespace HuffmanTest
             return -1;
         }
 
-        private static int[,] BuildDecodingArray()
+        private static short[,] BuildDecodingArray()
         {
-            var array = new int[15, 256];
+            var array = new short[15, 256];
             
             int nextAvailableSubIndex = 1;
             // loop through each entry in the encoding table and create entries for it in our decoding array
@@ -447,7 +449,7 @@ namespace HuffmanTest
                         int loopMax = 0x1 << (totalLength - tableEntry.bitLength); // have to create entries for all of these values
                         int value = (tableEntry.bitLength << 8) | i;    // store the length and value in two separate positions
                         for (uint k = 0; k < loopMax; k++)
-                            array[currentArrayIndex, codeByte + k] = value;   // each entry returns the same value
+                            array[currentArrayIndex, codeByte + k] = (short)value;   // each entry returns the same value
 
                         break;  // we're done with this entry. bail on the loop
                     }
@@ -462,7 +464,7 @@ namespace HuffmanTest
                     else
                     {
                         subArrayIndex = nextAvailableSubIndex++;    // if no one has our bit battern then we'll stake our claim on the next available array
-                        array[currentArrayIndex, codeByte] = -subArrayIndex;  // blaze the trail for the next guy
+                        array[currentArrayIndex, codeByte] = (short)-subArrayIndex;  // blaze the trail for the next guy
                     }
 
                     currentArrayIndex = subArrayIndex;  // we've left a pointer behind us and we're moving on to the next array
