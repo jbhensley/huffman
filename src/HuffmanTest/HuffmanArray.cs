@@ -286,9 +286,20 @@ namespace HuffmanTest
         // <returns>The number of decoded symbols.</returns>
         public static int Decode(byte[] src, int offset, int count, byte[] dst)
         {
-            // TODO: should we put argument checks here? (e.g. -1 < offset < src.Length; count > -1; src != null; dst != null; etc)
-            //       i assume values like count==0 are valid, even though they might not make sense in terms of calling
-            //  
+            // input validation
+            if (src == null || count == 0)
+                return 0;
+
+            if (offset < 0)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (offset >= src.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            if (count > src.Length - offset)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            if (dst == null)
+                throw new ArgumentNullException(nameof(dst));
 
             // let's narrow thing down to just the part of the source buffer that we've been asked to decode
             var sourceSpan = new ReadOnlySpan<byte>(src, offset, count);

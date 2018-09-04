@@ -55,26 +55,26 @@ namespace HuffmanTest
             }
         }
 
-        static void DumpDecodingArray()
-        {   
-            using (var writer = File.CreateText("c:\\temp\\out.txt"))
-            {
-                var length0 = HuffmanArray.s_decodingArray.GetLength(0);
-                var length1= HuffmanArray.s_decodingArray.GetLength(1);
+        //static void DumpDecodingArray()
+        //{   
+        //    using (var writer = File.CreateText("c:\\temp\\out.txt"))
+        //    {
+        //        var length0 = HuffmanArray.s_decodingArray.GetLength(0);
+        //        var length1= HuffmanArray.s_decodingArray.GetLength(1);
 
-                for (int i = 0; i < length0; i++)
-                {
-                    writer.Write("{");
-                    for (int j = 0; j < length1; j++)
-                    {
-                        writer.Write(HuffmanArray.s_decodingArray[i, j]);
-                        if (j < length1 - 1)
-                            writer.Write(",");
-                    }
-                    writer.WriteLine("}");
-                }
-            }
-        }
+        //        for (int i = 0; i < length0; i++)
+        //        {
+        //            writer.Write("{");
+        //            for (int j = 0; j < length1; j++)
+        //            {
+        //                writer.Write(HuffmanArray.s_decodingArray[i, j]);
+        //                if (j < length1 - 1)
+        //                    writer.Write(",");
+        //            }
+        //            writer.WriteLine("}");
+        //        }
+        //    }
+        //}
 
         static void DumpDecodingDictionary()
         {
