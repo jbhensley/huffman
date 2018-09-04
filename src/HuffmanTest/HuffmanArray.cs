@@ -313,17 +313,17 @@ namespace HuffmanTest
                 int decodedBits = 0;
 
                 // decoding a symbol will take a maximum of four bytes (longest symbol is represented by a 30 bit pattern)
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i <= 24; i += 8)
                 {
                     // grab the next byte and push it over to make room for bits we have to borrow
                     byte workingByte = (byte)(sourceSpan[sourceIndex] << bitOffset);
                     // borrow some bits if we need to
                     if (bitOffset > 0)
                         workingByte |= (byte)((sourceIndex < sourceSpan.Length - 1 ? sourceSpan[sourceIndex + 1] : 0) >> (8 - bitOffset));
-                    
+
                     // key into array
                     int decodedValue = decodingArray[arrayIndex, workingByte];
-                    
+
                     // negative values are a pointer to the next decoding array
                     if (decodedValue < 0)
                     {
@@ -345,19 +345,14 @@ namespace HuffmanTest
                         // store the decoded value and increment destinationIndex
                         dst[destinationIndex++] = (byte)decodedValue;
 
-                        // if we decoded more bits than we are borrowing then advance to next byte.
-                        // subtract (8 * i) because we only care about how many bits were decoded in the last byte.
-                        // e.g. we are borrowing 5 bits and decoded a 13 bit symbol
-                        //      decodedBits - (8 * i) == 5      (i == 1)
-                        //      8 - bitOffset == 3              (there were only 3 bits left in this byte, the rest were borrowed)
-                        //      no bits left in this byte so we need to roll forward to the next and re-align bitOffset
-                        if (decodedBits - (8 * i) >= 8 - bitOffset)
+                        // if we decoded more bits than we are borrowing then advance to next byte
+                        if (decodedBits - i >= 8 - bitOffset)
                             sourceIndex++;
 
                         // calculate and re-align bitOffset
                         bitOffset += decodedBits;
                         bitOffset &= 7; // same as modulo 8
-                        
+
                         break;
                     }
                 }
