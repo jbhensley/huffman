@@ -6,7 +6,7 @@ namespace HuffmanTest
 {
     internal class Huffman
     {
-        public static readonly (uint code, int bitLength)[] s_encodingTable = new (uint code, int bitLength)[]
+        public static readonly (uint code, int bitLength)[] s_encodingTable = new(uint code, int bitLength)[]
         {
             (0b11111111_11000000_00000000_00000000, 13),
             (0b11111111_11111111_10110000_00000000, 23),
@@ -267,12 +267,7 @@ namespace HuffmanTest
             (0b11111111_11111111_11111111_11111100, 30)
         };
 
-        public static readonly short[,] s_decodingArray;
-
-        static Huffman()
-        {
-            s_decodingArray = BuildDecodingArray();
-        }
+        public static readonly short[,] s_decodingArray = BuildDecodingArray();
 
         public static (uint encoded, int bitLength) Encode(int data)
         {

@@ -17,6 +17,10 @@ namespace HuffmanTest
 
             //DumpDecodingArray();
 
+            //var bytes = new byte[] { 255 };
+            //var dst = new byte[10];
+            //var result = Huffman.Decode(bytes, 0, 1, dst);
+
             Console.WriteLine("Finished");
             Console.ReadLine();
         }
