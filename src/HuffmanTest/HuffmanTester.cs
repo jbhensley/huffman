@@ -28,26 +28,17 @@ namespace HuffmanTest
                 var bitsLeftInByte = 8 - (bitLength % 8);
                 if (bitsLeftInByte < 8)
                     bytes[bytes.Length - 1] |= (byte)((0x1 << bitsLeftInByte) - 1);
-                //if ((bytes[bytes.Length - 1] & 0xFF) == 0xFF)
-                //{
-                //    var array = new byte[bytes.Length - 1];
-                //    for (int j = 0; j < array.Length; j++)
-                //        array[j] = bytes[j];
 
-                //    bytes = array;
-                //}
                 var dst = new byte[1];
                 int decoded = Huffman.Decode(bytes, 0, bytes.Length, dst);
                 Assert.NotEqual(-1, decoded);
                 Assert.Equal(1, decoded);
-                //Assert.Equal(bitLength, decoded);
                 Assert.Equal(i, dst[0]);
             }
         }
 
         private static void CheckHuffmanHeader()
-        {
-            new HuffmanBench().Setup();
+        {   
             foreach (var entry in HuffmanBench.s_headerData)
             {
                 var decoded = new byte[entry.decodedValue.Length];
@@ -61,8 +52,9 @@ namespace HuffmanTest
         {
             var random = System.Security.Cryptography.RandomNumberGenerator.Create();
             var lenByte = new byte[1];
+            int loopCount = 1_000_000;
 
-            for (int i = 0; i < 1_000_000; i++)
+            for (int i = 1; i <= loopCount; i++)
             {
                 random.GetBytes(lenByte);
                 var randBytes = new byte[lenByte[0]];
@@ -72,8 +64,8 @@ namespace HuffmanTest
                 var decodedBytes = Huffman.Decode(encodedBytes, 0, encodedBytes.Length, unencodedBytes);
 
                 Assert.True(Enumerable.SequenceEqual(randBytes, unencodedBytes));
-                if (i % 10000 == 0)
-                    Console.WriteLine($"Validated {i} random values");
+                if (i % 10000 == 0 || i == loopCount)
+                    Console.WriteLine($"Validated {i.ToString("#,###")} random values");
             }
         }
 
