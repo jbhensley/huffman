@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Xunit;
 
 namespace HuffmanTest
 {
-    internal class HuffmanArrayOld
+    internal class Huffman
     {
-        private static readonly (uint code, int bitLength)[] s_encodingTable = new (uint code, int bitLength)[]
+        public static readonly (uint code, int bitLength)[] s_encodingTable = new (uint code, int bitLength)[]
         {
             (0b11111111_11000000_00000000_00000000, 13),
             (0b11111111_11111111_10110000_00000000, 23),
@@ -268,9 +267,9 @@ namespace HuffmanTest
             (0b11111111_11111111_11111111_11111100, 30)
         };
 
-        private static readonly short[,] s_decodingArray;
+        public static readonly short[,] s_decodingArray;
 
-        static HuffmanArrayOld()
+        static Huffman()
         {
             s_decodingArray = BuildDecodingArray();
         }
@@ -284,26 +283,23 @@ namespace HuffmanTest
         /// Decodes a Huffman encoded string from a byte array.
         /// </summary>
         /// <param name="src">The source byte array containing the encoded data.</param>
-        /// <param name="offsets">The offset in the byte array where the coded data starts.</param>
+        /// <param name="offset">The offset in the byte array where the coded data starts.</param>
         /// <param name="count">The number of bytes to decode.</param>
         /// <param name="dst">The destination byte array to store the decoded data.</param>
-        // <returns>The number of decoded symbols.</returns>
+        /// <returns>The number of decoded symbols.</returns>
         public static int Decode(byte[] src, int offset, int count, byte[] dst)
         {
             // input validation
             if (src == null || count == 0)
                 return 0;
 
-            if (offset < 0)
-                throw new ArgumentOutOfRangeException(nameof(offset));
-            if (offset >= src.Length)
-                throw new ArgumentOutOfRangeException(nameof(offset));
-            if (count < 0)
-                throw new ArgumentOutOfRangeException(nameof(count));
-            if (count > src.Length - offset)
-                throw new ArgumentOutOfRangeException(nameof(count));
             if (dst == null)
                 throw new ArgumentNullException(nameof(dst));
+
+            if ((uint)offset >= (uint)src.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if ((uint)count > (uint)(src.Length - offset))
+                throw new ArgumentOutOfRangeException(nameof(count));
 
             // let's narrow thing down to just the part of the source buffer that we've been asked to decode
             var sourceSpan = new ReadOnlySpan<byte>(src, offset, count);
@@ -311,7 +307,7 @@ namespace HuffmanTest
             int destinationIndex = 0;
             int bitOffset = 0;              // symbol bit patterns do not necessarily align to byte boundaries. need to keep track of our offset within a byte
             while (sourceIndex < sourceSpan.Length)
-            {   
+            {
                 int arrayIndex = 0;         // index into the decoding array
                 int decodedBits = 0;
 
@@ -320,9 +316,10 @@ namespace HuffmanTest
                 {
                     // grab the next byte and push it over to make room for bits we have to borrow
                     byte workingByte = (byte)(sourceSpan[sourceIndex] << bitOffset);
-                    // borrow some bits if we need to
-                    if (bitOffset > 0)
-                        workingByte |= (byte)((sourceIndex < sourceSpan.Length - 1 ? sourceSpan[sourceIndex + 1] : 0) >> (8 - bitOffset));
+
+                    // borrow some bits if we need to and there is another byte to borrow from
+                    if (bitOffset > 0 && sourceIndex < sourceSpan.Length - 1)
+                        workingByte |= (byte)(sourceSpan[sourceIndex + 1] >> (8 - bitOffset));
 
                     // key into array
                     int decodedValue = s_decodingArray[arrayIndex, workingByte];
@@ -339,7 +336,6 @@ namespace HuffmanTest
                     {
                         decodedBits = decodedValue >> 8;    // length is in the second LSB
                         decodedValue &= 0xFF;               // value is in the LSB
-
 
                         // Destination is too small.
                         if (destinationIndex == dst.Length)
@@ -358,6 +354,10 @@ namespace HuffmanTest
 
                         break;
                     }
+
+                    // we've advanced sourceIndex to the end of the span
+                    if (sourceIndex == sourceSpan.Length)
+                        break;
                 }
 
                 // we checked four bytes did not come up with a valid bit pattern
@@ -367,7 +367,6 @@ namespace HuffmanTest
                 // check for padding in the last byte before we loop back around and try to decode again
                 if (sourceIndex == sourceSpan.Length - 1)
                 {
-                    
                     // see if all of the remaning bits are padding
                     int paddingMask = (0x1 << (8 - bitOffset)) - 1;
                     if ((sourceSpan[sourceIndex] & paddingMask) == paddingMask)
@@ -390,30 +389,34 @@ namespace HuffmanTest
         private static short[,] BuildDecodingArray()
         {
             var array = new short[15, 256];
-            
+
             int nextAvailableSubIndex = 1;
             // loop through each entry in the encoding table and create entries for it in our decoding array
-            for (int i = 0; i < 256; i++)   // we're only going to 255. the EOS pattern of 256 (which will not fit into a byte) will be left out.
+            // we're only going to 255. the EOS pattern of 256 (which will not fit into a byte) will be left out.
+            // trying to decode EOS should result in a decoding exception as per the RFC
+            // A Huffman-encoded string literal containing the EOS symbol MUST be treated as a decoding error.
+            // http://httpwg.org/specs/rfc7541.html#rfc.section.5.2
+            for (int i = 0; i < 256; i++)
             {
                 var tableEntry = s_encodingTable[i];    // keep from having to do "s_encodingTable[i]" everywhere
                 int currentArrayIndex = 0;              // which array are we working with
 
                 // loop for however many bytes the value occupies
-                for (int j = 0; j <= Math.Ceiling(tableEntry.bitLength / 8.0); j++)
+                for (int j = 0; j < tableEntry.bitLength; j += 8)
                 {
-                    int byteOffset = 8 * (3 - j);       // how many bits is the working byte offset from the right
-                    int totalLength = 8 * (j + 1);      // how many bits of the entry can consume total so far
+                    int byteOffset = 24 - j;            // how many bits is the working byte offset from the right
+                    int totalLength = j + 8;            // how many bits of the entry can we consume total so far
 
                     uint codeByte = (tableEntry.code >> byteOffset) & 0xFF;  // extract the working byte and shift it all the way to the right
 
-                    // we can finish the entry this time around. store the remaning bits and bail on the loop
+                    // if we can finish the entry this time around then store the remaning bits and bail on the loop
                     if (tableEntry.bitLength <= totalLength)
                     {
                         // we need to store all permutations of the bits that are beyond the length of the code
                         int loopMax = 0x1 << (totalLength - tableEntry.bitLength); // have to create entries for all of these values
-                        int value = (tableEntry.bitLength << 8) | i;    // store the length and value in two separate positions
+                        short value = (short)((tableEntry.bitLength << 8) | i);    // store the length and value in two separate bytes
                         for (uint k = 0; k < loopMax; k++)
-                            array[currentArrayIndex, codeByte + k] = (short)value;   // each entry returns the same value
+                            array[currentArrayIndex, codeByte + k] = value;   // each entry returns the same value
 
                         break;  // we're done with this entry. bail on the loop
                     }
@@ -437,17 +440,5 @@ namespace HuffmanTest
 
             return array;
         }
-
-        //public static void VerifyDecodingArray()
-        //{
-        //    for (int i = 0; i < s_encodingTable.Length - 1; i++)    // Length -1 because the last entry is the EOS symbol, which must not be used
-        //    {
-        //        (uint code, int bitLength) = s_encodingTable[i];
-        //        int decoded = Decode(code, bitLength, out int decodedBits);
-        //        Assert.NotEqual(-1, decoded);
-        //        Assert.Equal(bitLength, decodedBits);
-        //        Assert.Equal(i, decoded);
-        //    }
-        //}
     }
 }

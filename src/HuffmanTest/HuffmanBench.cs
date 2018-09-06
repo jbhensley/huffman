@@ -94,7 +94,7 @@ namespace HuffmanTest
                 HuffmanDictOpt.s_decodingDictionary.Add(item.Key, item.Value);
 
             // build the array
-            HuffmanArray.VerifyDecodingArray();
+            //HuffmanArray.VerifyDecodingArray();
 
             // prepare data to decode
             using (var reader = File.OpenText(@".\HuffmanHeaders.txt"))    // file must be set to copy to output dir for this to work
@@ -306,7 +306,7 @@ namespace HuffmanTest
                     {
                         var encoded = s_headerData[i].encoded;
                             
-                        var actualLength = HuffmanArray.Decode(encoded, 0, encoded.Length, rented);
+                        var actualLength = Huffman.Decode(encoded, 0, encoded.Length, rented);
                         sum += (uint)actualLength;
                     }
                 }
