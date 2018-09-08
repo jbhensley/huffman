@@ -206,39 +206,39 @@ namespace HuffmanTest
             return sum;
         }
 
-        [Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
-        public ulong Array()
-        {
-            var sum = 0ul;
+        //[Benchmark(Baseline = false, OperationsPerInvoke = (_simpleCount + _headerCount) * _iterations)]
+        //public ulong Array()
+        //{
+        //    var sum = 0ul;
 
-            var rented = ArrayPool<byte>.Shared.Rent(4096);
-            {
-                for (var j = 0; j < _iterations; j++)
-                {
-                    // Simple
-                    //for (var i = 0; i < s_simpleData.Length; i++)
-                    //{
-                    //    var encoded = s_simpleData[i].encoded;
-                    //    //var expected = _test[i].expected;
+        //    var rented = ArrayPool<byte>.Shared.Rent(4096);
+        //    {
+        //        for (var j = 0; j < _iterations; j++)
+        //        {
+        //            // Simple
+        //            //for (var i = 0; i < s_simpleData.Length; i++)
+        //            //{
+        //            //    var encoded = s_simpleData[i].encoded;
+        //            //    //var expected = _test[i].expected;
 
-                    //    var actualLength = HuffmanArray.Decode(encoded, 0, encoded.Length, rented);
-                    //    sum += (uint)actualLength;
-                    //}
+        //            //    var actualLength = HuffmanArray.Decode(encoded, 0, encoded.Length, rented);
+        //            //    sum += (uint)actualLength;
+        //            //}
 
-                    // Headers
-                    for (var i = 0; i < s_headerData.Length; i++)
-                    {
-                        var encoded = s_headerData[i].encoded;
+        //            // Headers
+        //            for (var i = 0; i < s_headerData.Length; i++)
+        //            {
+        //                var encoded = s_headerData[i].encoded;
                             
-                        var actualLength = Huffman.Decode(encoded, 0, encoded.Length, rented);
-                        sum += (uint)actualLength;
-                    }
-                }
-            }
-            ArrayPool<byte>.Shared.Return(rented);
+        //                var actualLength = Huffman.Decode(encoded, 0, encoded.Length, rented);
+        //                sum += (uint)actualLength;
+        //            }
+        //        }
+        //    }
+        //    ArrayPool<byte>.Shared.Return(rented);
 
-            return sum;
-        }
+        //    return sum;
+        //}
 
         #region Helpers
 

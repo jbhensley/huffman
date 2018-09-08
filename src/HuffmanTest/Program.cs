@@ -1,6 +1,7 @@
 ﻿using BenchmarkDotNet.Running;
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 using Xunit;
 
@@ -13,13 +14,31 @@ namespace HuffmanTest
             //var bench = new HuffmanBench();
             //var summary = BenchmarkRunner.Run<HuffmanBench>();
 
-            HuffmanTester.RunArrayTests();
+            //HuffmanTester.RunArrayTests();
 
             //DumpDecodingArray();
 
-            //var bytes = new byte[] { 255 };
+
+            //0b11111111_11111111_11111111_11111100 // EOS
+            //var EOS = new byte[] { 0b11111111, 0b11111111, 0b11111111, 0b11111100 };
+            // a character followed by EOS
+            //var original = new byte[] { (byte)'a' }.Concat(EOS).ToArray();
+            //var encoded = new byte[10];
+            //var count = HuffmanDecodingTests.Encode(original, encoded);
             //var dst = new byte[10];
-            //var result = Huffman.Decode(bytes, 0, 1, dst);
+            //var result = Huffman.Decode(encoded, 0, count, dst);
+
+            // send single EOS
+            var EOS = new byte[] { 0b11111111, 0b11111111, 0b11111111, 0b11111100 };
+            //var source = new byte[1];
+            var destination = new byte[12];
+            for (int i = 0; i < 256; i++)
+            {
+                var encoded = HuffmanDecodingTests.GetEncodedValue((byte)i);
+                
+                //source[0] = (byte)i;
+                //int encodedByteCount = Encode(source, destination);
+            }
 
             Console.WriteLine("Finished");
             Console.ReadLine();

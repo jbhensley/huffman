@@ -278,30 +278,21 @@ namespace HuffmanTest
         /// Decodes a Huffman encoded string from a byte array.
         /// </summary>
         /// <param name="src">The source byte array containing the encoded data.</param>
-        /// <param name="offset">The offset in the byte array where the coded data starts.</param>
-        /// <param name="count">The number of bytes to decode.</param>
         /// <param name="dst">The destination byte array to store the decoded data.</param>
         /// <returns>The number of decoded symbols.</returns>
-        public static int Decode(byte[] src, int offset, int count, byte[] dst)
+        public static int Decode(ReadOnlySpan<byte> src, Span<byte> dst)
         {
             // input validation
-            if (src == null || count == 0)
+            if (src == null)
                 return 0;
 
             if (dst == null)
                 throw new ArgumentNullException(nameof(dst));
 
-            if ((uint)offset >= (uint)src.Length)
-                throw new ArgumentOutOfRangeException(nameof(offset));
-            if ((uint)count > (uint)(src.Length - offset))
-                throw new ArgumentOutOfRangeException(nameof(count));
-
-            // let's narrow thing down to just the part of the source buffer that we've been asked to decode
-            var sourceSpan = new ReadOnlySpan<byte>(src, offset, count);
             int sourceIndex = 0;
             int destinationIndex = 0;
             int bitOffset = 0;              // symbol bit patterns do not necessarily align to byte boundaries. need to keep track of our offset within a byte
-            while (sourceIndex < sourceSpan.Length)
+            while (sourceIndex < src.Length)
             {
                 int arrayIndex = 0;         // index into the decoding array
                 int decodedBits = 0;
@@ -310,14 +301,14 @@ namespace HuffmanTest
                 for (int i = 0; i <= 24; i += 8)
                 {
                     // grab the next byte and push it over to make room for bits we have to borrow
-                    byte workingByte = (byte)(sourceSpan[sourceIndex] << bitOffset);
+                    byte workingByte = (byte)(src[sourceIndex] << bitOffset);
 
                     // borrow some bits if we need to
                     if (bitOffset > 0)
                     {
                         // grab bits from neighboring byte if there is any
-                        if (sourceIndex < sourceSpan.Length - 1)
-                            workingByte |= (byte)(sourceSpan[sourceIndex + 1] >> (8 - bitOffset));
+                        if (sourceIndex < src.Length - 1)
+                            workingByte |= (byte)(src[sourceIndex + 1] >> (8 - bitOffset));
                         else  // otherwise use padding value
                             workingByte |= (byte)(0xFF >> (8 - bitOffset));
                     }
@@ -357,7 +348,7 @@ namespace HuffmanTest
                     }
 
                     // we've advanced sourceIndex to the end of the span
-                    if (sourceIndex == sourceSpan.Length)
+                    if (sourceIndex == src.Length)
                         break;
                 }
 
@@ -366,11 +357,11 @@ namespace HuffmanTest
                     throw new HuffmanDecodingException();
 
                 // check for padding in the last byte before we loop back around and try to decode again
-                if (sourceIndex == sourceSpan.Length - 1)
+                if (sourceIndex == src.Length - 1)
                 {
                     // see if all of the remaning bits are padding
                     int paddingMask = (0x1 << (8 - bitOffset)) - 1;
-                    if ((sourceSpan[sourceIndex] & paddingMask) == paddingMask)
+                    if ((src[sourceIndex] & paddingMask) == paddingMask)
                     {
                         // if our bitOffset is zero then all of bits in this byte are set
                         // "A padding strictly longer than 7 bits MUST be treated as a decoding error."
