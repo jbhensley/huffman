@@ -298,7 +298,7 @@ namespace HuffmanTest
             return (((ulong)code) << 32, bitLength);
         }
 
-        public static int Encode(byte[] source, byte[] destination)
+        public static int Encode(byte[] source, byte[] destination, bool injectEOS)
         {
             ulong currentBits = 0;  // We can have 7 bits of rollover plus 30 bits for the next encoded value, so use a ulong
             int currentBitCount = 0;
@@ -307,6 +307,14 @@ namespace HuffmanTest
             for (int i = 0; i < source.Length; i++)
             {
                 (ulong code, int bitLength) = GetEncodedValue(source[i]);
+
+                // inject EOS if instructed to
+                if(injectEOS)
+                {
+                    code |= (ulong)0b11111111_11111111_11111111_11111100 << (32 - bitLength);
+                    bitLength += 30;
+                    injectEOS = false;
+                }
 
                 currentBits |= code >> currentBitCount;
                 currentBitCount += bitLength;
@@ -335,7 +343,7 @@ namespace HuffmanTest
         {
             // Worst case encoding is 30 bits per input byte, so make the encoded buffer 4 times as big
             byte[] encoded = new byte[input.Length * 4];
-            int encodedByteCount = Encode(input, encoded);
+            int encodedByteCount = Encode(input, encoded, false);
 
             // Worst case decoding is an output byte per 5 input bits, so make the decoded buffer 2 times as big
             byte[] decoded = new byte[encoded.Length * 2];
@@ -411,7 +419,7 @@ namespace HuffmanTest
             for (int i = 0; i < 256; i++)
             {
                 source[0] = (byte)i;
-                int encodedByteCount = Encode(source, destination);
+                int encodedByteCount = Encode(source, destination, false);
                 if (encodedByteCount > 1)
                 {
                     yield return new object[] { destination.Take(encodedByteCount - 1).ToArray() };
@@ -435,7 +443,7 @@ namespace HuffmanTest
             for (int i = 0; i < 256; i++)
             {
                 source[0] = (byte)i;
-                int encodedByteCount = Encode(source, destination);
+                int encodedByteCount = Encode(source, destination, false);
                 yield return new object[] { destination.Take(encodedByteCount).Concat(pad1).ToArray() };
                 yield return new object[] { destination.Take(encodedByteCount).Concat(pad2).ToArray() };
                 yield return new object[] { destination.Take(encodedByteCount).Concat(pad3).ToArray() };
@@ -443,50 +451,16 @@ namespace HuffmanTest
             }
 
             // send single EOS
-            var EOS = new byte[] { 0b11111111, 0b11111111, 0b11111111, 0b11111100 };
-            yield return new object[] { EOS };
+            yield return new object[] { new byte[] { 0b11111111, 0b11111111, 0b11111111, 0b11111100 } };
 
             // send combinations with EOS in the middle
+            source = new byte[2];
             destination = new byte[24];
-            for (int i = 0; i < 255; i++)
-            {   
-                ulong currentBits = 0;  // We can have 7 bits of rollover plus 30 bits for the next encoded value, so use a ulong
-                int currentBitCount = 0;
-                int dstOffset = 0;
-
-                ulong code = 0;
-                int bitLength = 0;
-                for (int j = 0; j < 3; j++)
-                {
-                    if (j == 1)
-                    {
-                        // hard-coded EOS on the second pass
-                        code = (ulong)(0b11111111_11111111_11111111_11111100) << 32;
-                        bitLength = 30;
-                    }
-
-                    else
-                        (code, bitLength) = HuffmanDecodingTests.GetEncodedValue(source[0]);
-
-                    currentBits |= code >> currentBitCount;
-                    currentBitCount += bitLength;
-
-                    while (currentBitCount >= 8)
-                    {
-                        destination[dstOffset++] = (byte)(currentBits >> 56);
-                        currentBits = currentBits << 8;
-                        currentBitCount -= 8;
-                    }
-                }
-
-                // Fill any trailing bits with ones, per RFC
-                if (currentBitCount > 0)
-                {
-                    currentBits |= 0xFFFFFFFFFFFFFFFF >> currentBitCount;
-                    destination[dstOffset++] = (byte)(currentBits >> 56);
-                }
-
-                yield return new object[] { destination.Take(dstOffset).ToArray() };
+            for (int i = 0; i < 256; i++)
+            {
+                source[0] = source[1] = (byte)i;
+                int encodedByteCount = Encode(source, destination, true);
+                yield return new object[] { destination.Take(encodedByteCount).ToArray() };
             }
         }
     }
